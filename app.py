@@ -1262,7 +1262,7 @@ def render_upload_screen():
             line-height: 1.05;
             font-weight: 800;
             letter-spacing: -2px;
-            margin: 110px 0 72px 0;
+            margin: 150px 0 72px 0;
             color: var(--orange);
         }
 
