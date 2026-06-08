@@ -797,7 +797,7 @@ def apply_css():
 /* project info */
 
 .project-info-small-title {
-    margin-top: 8px;
+    margin-top: 4px;
     margin-bottom: 16px;
     font-size: 19px;
     line-height: 1.05;
