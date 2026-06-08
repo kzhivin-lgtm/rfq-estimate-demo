@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from styles import apply_css
+from pricing import VAT_RATE, format_money, parse_money_input, normalize_money_state, vat_summary
 
 
 st.set_page_config(
@@ -16,8 +17,6 @@ st.set_page_config(
 
 
 COMPANY_NAME = "8DOOR"
-VAT_RATE = 0.18
-
 
 # -----------------------------
 # data
@@ -283,29 +282,6 @@ def render_screen_header(title: str, subtitle: str | None = None):
             unsafe_allow_html=True,
         )
 
-
-def format_money(value):
-    if value is None:
-        return "—"
-
-    formatted = f"{int(value):,}".replace(",", "\u00A0")
-    return f"₪{formatted}"
-
-
-def parse_money_input(value, fallback=0):
-    if value is None:
-        return fallback
-
-    digits = "".join(ch for ch in str(value) if ch.isdigit())
-
-    if not digits:
-        return fallback
-
-    return int(digits)
-
-def normalize_money_state(key, fallback=0):
-    value = parse_money_input(st.session_state.get(key), fallback=fallback)
-    st.session_state[key] = format_money(value)
 
 
 # -----------------------------
