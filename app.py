@@ -6,7 +6,7 @@ import streamlit as st
 
 
 st.set_page_config(
-    page_title="RFQ-to-Estimate Copilot",
+    page_title="RFQ-to-Estimate Demo",
     page_icon="📐",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -295,12 +295,44 @@ def apply_css():
         }
 
         header[data-testid="stHeader"] {
-            background: rgba(255,255,255,0);
-            height: 0rem;
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
         }
 
         #MainMenu, footer {
             visibility: hidden;
+        }
+
+        /* hide Streamlit chrome / toolbar where reachable from app DOM */
+
+        #MainMenu,
+        footer,
+        header[data-testid="stHeader"],
+        div[data-testid="stToolbar"],
+        div[data-testid="stDecoration"],
+        div[data-testid="stStatusWidget"],
+        div[data-testid="stDeployButton"],
+        #GithubIcon,
+        .viewerBadge_container__1QSob,
+        .viewerBadge_link__1S137,
+        .viewerBadge_text__1JaDK,
+        .styles_viewerBadge__1yB5_ {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            max-height: 0 !important;
+        }
+
+        /* hide image fullscreen buttons */
+        button[title="View fullscreen"],
+        button[title="Fullscreen"],
+        button[aria-label="View fullscreen"],
+        button[aria-label="Fullscreen"],
+        div[data-testid="stImage"] button {
+            display: none !important;
+            visibility: hidden !important;
         }
 
         /* -----------------------------
@@ -308,10 +340,14 @@ def apply_css():
         ----------------------------- */
 
         .hero-wrap {
+            height: 100vh;
+            max-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 250px;
+            justify-content: center;
+            padding-top: 0;
+            transform: translateY(-24px);
         }
 
         .hero-title {
@@ -1192,6 +1228,34 @@ def normalize_money_state(key, fallback=0):
 # -----------------------------
 
 def render_upload_screen():
+    st.markdown(
+        """
+        <style>
+        html, body {
+            overflow: hidden !important;
+        }
+
+        .stApp {
+            overflow: hidden !important;
+        }
+
+        section.main,
+        div[data-testid="stAppViewContainer"],
+        div[data-testid="stAppViewBlockContainer"] {
+            overflow: hidden !important;
+        }
+
+        .block-container {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown('<div class="hero-wrap">', unsafe_allow_html=True)
 
     st.markdown(
