@@ -1232,35 +1232,51 @@ def render_upload_screen():
         """
         <style>
         html, body {
+            height: 100% !important;
             overflow: hidden !important;
         }
 
-        .stApp {
-            overflow: hidden !important;
-        }
-
-        section.main,
+        .stApp,
         div[data-testid="stAppViewContainer"],
-        div[data-testid="stAppViewBlockContainer"] {
+        section.main {
+            height: 100vh !important;
+            max-height: 100vh !important;
             overflow: hidden !important;
         }
 
         .block-container {
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
             height: 100vh !important;
             max-height: 100vh !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: hidden !important;
+        }
+
+        .landing-title {
+            text-align: center;
+            font-size: 64px;
+            line-height: 1.05;
+            font-weight: 800;
+            letter-spacing: -2px;
+            margin: 0 0 72px 0;
+            color: var(--orange);
+        }
+
+        div[data-testid="stFileUploader"] {
+            flex: 0 0 auto !important;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="hero-wrap">', unsafe_allow_html=True)
-
     st.markdown(
         """
-        <div class="hero-title">
+        <div class="landing-title">
             RFQ to Estimate to Proposal
         </div>
         """,
@@ -1272,8 +1288,6 @@ def render_upload_screen():
         type=["pdf", "xlsx", "xls", "csv", "png", "jpg", "jpeg", "dwg", "dxf"],
         label_visibility="collapsed",
     )
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
     if uploaded_file is not None:
         st.session_state.uploaded_filename = uploaded_file.name
