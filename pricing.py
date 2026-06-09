@@ -1,5 +1,7 @@
 import streamlit as st
 
+from estimate_config import VAT_RATE
+
 
 VAT_RATE = 0.18
 

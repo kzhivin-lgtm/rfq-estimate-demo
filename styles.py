@@ -907,6 +907,222 @@ def apply_css():
                 display: none !important;
             }
 
+
+        /* -----------------------------
+        object detail card
+        ----------------------------- */
+
+        .object-detail-title-block {
+            margin-bottom: 36px;
+        }
+
+        .object-card-section-title {
+            font-size: 24px;
+            line-height: 1.05;
+            font-weight: 800;
+            color: var(--text-main);
+            margin: 0 0 18px 0;
+        }
+
+        .object-cost-summary {
+            margin-top: 26px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.2fr;
+            column-gap: 18px;
+            align-items: stretch;
+        }
+
+        .object-cost-cell {
+            border-top: 1px solid var(--line-soft);
+            padding-top: 18px;
+        }
+
+        .object-cost-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .object-cost-value {
+            font-size: 24px;
+            line-height: 1;
+            font-weight: 900;
+            color: var(--text-main);
+        }
+
+        .object-cost-total .object-cost-value {
+            color: var(--orange);
+            font-size: 32px;
+        }
+
+        .object-detail-buttons-spacer {
+            height: 32px;
+        }
+
+        .object-card-section-spaced {
+            margin-top: 44px;
+        }
+
+/* -----------------------------
+   object detail card
+----------------------------- */
+
+.object-meta-line {
+    display: flex;
+    gap: 34px;
+    align-items: center;
+    font-size: 22px;
+    line-height: 1.05;
+    font-weight: 800;
+    color: var(--text-main);
+    margin: 20px 0 24px 0;
+}
+
+.object-section-header {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    align-items: end;
+    column-gap: 24px;
+    margin: 26px 0 8px 0;
+}
+
+.object-section-title {
+    font-size: 20px;
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    color: var(--text-main);
+}
+
+.object-section-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.15fr;
+    column-gap: 16px;
+    align-items: end;
+}
+
+.object-section-metric-label {
+    font-size: 11px;
+    line-height: 1.05;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+}
+
+.object-section-metric-value {
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.object-section-metric-total .object-section-metric-value {
+    color: var(--orange);
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.object-final-summary {
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    column-gap: 24px;
+    align-items: end;
+}
+
+.object-final-title {
+    font-size: 24px;
+    line-height: 1.05;
+    font-weight: 900;
+    color: var(--text-main);
+}
+
+.object-final-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.2fr;
+    column-gap: 16px;
+    align-items: end;
+}
+
+.object-final-label {
+    font-size: 11px;
+    line-height: 1.05;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.object-final-value {
+    font-size: 20px;
+    line-height: 1;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.object-final-total {
+    font-size: 30px;
+    font-weight: 950;
+    color: var(--orange);
+}
+
+.object-detail-buttons-spacer {
+    height: 26px;
+}
+
+/* compact data editor / dataframe */
+div[data-testid="stDataFrame"] {
+    margin-bottom: 4px !important;
+}
+
+div[data-testid="stDataFrame"] div[role="gridcell"],
+div[data-testid="stDataFrame"] div[role="columnheader"] {
+    font-size: 12px !important;
+}
+
+div[data-testid="stDataFrame"] div[role="columnheader"] {
+    font-weight: 800 !important;
+}
+
+/* compact expanders */
+div[data-testid="stExpander"] {
+    border: 0 !important;
+    box-shadow: none !important;
+    margin: 2px 0 !important;
+}
+
+div[data-testid="stExpander"] details {
+    border: 0 !important;
+}
+
+div[data-testid="stExpander"] summary {
+    padding: 4px 0 !important;
+    font-size: 12px !important;
+    color: var(--text-muted) !important;
+}
+
+div[data-testid="stExpander"] div[data-testid="stExpanderDetails"] {
+    padding: 2px 0 8px 0 !important;
+}
+
+/* Done review buttons */
+div[data-testid="stButton"] button[kind="primary"] {
+    background: #2f9e44 !important;
+    border-color: #2f9e44 !important;
+    color: #ffffff !important;
+}
+
+div[data-testid="stButton"] button[kind="primary"] p {
+    color: #ffffff !important;
+}
+
+div[data-testid="stButton"] button[kind="primary"]:hover {
+    background: #26883a !important;
+    border-color: #26883a !important;
+    color: #ffffff !important;
+}
+
+div[data-testid="stButton"] button[kind="primary"]:hover p {
+    color: #ffffff !important;
+}
+
         </style>
         """,
         unsafe_allow_html=True,
