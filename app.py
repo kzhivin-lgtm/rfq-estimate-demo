@@ -1,11 +1,54 @@
+# RFQ-to-Estimate Demo — app.py
+#
+# Formatting-only cleanup of the old Streamlit app code.
+# Business logic, formulas, session_state keys, routing, widget keys,
+# and hardcoded demo values are intentionally preserved.
+
 import time
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
+try:
+    from st_aggrid import (
+        AgGrid,
+        DataReturnMode,
+        GridOptionsBuilder,
+        GridUpdateMode,
+        JsCode,
+    )
+except ImportError:
+    AgGrid = None
+    DataReturnMode = None
+    GridOptionsBuilder = None
+    GridUpdateMode = None
+    JsCode = None
+
 from styles import apply_css
-from pricing import VAT_RATE, format_money, parse_money_input, normalize_money_state, vat_summary
+from pricing import format_money, parse_money_input, normalize_money_state
+
+from estimate_config import (
+    VAT_RATE,
+    EMPLOYER_LOAD_RATE,
+    SALE_PRICE_MARKUP_RATE,
+    LABOR_CONTINGENCY_RATE,
+    WARRANTY_RESERVE_RATE,
+    MANAGEMENT_BUFFER_RATE,
+    DESIGN_BUREAU_COMMISSION_RATE,
+    PRODUCTION_WORKERS,
+    WORKDAYS_PER_MONTH,
+    HOURS_PER_DAY,
+    ROLE_RATES,
+    MONTHLY_OVERHEAD_ROWS,
+    DELIVERY_RATE,
+    INSTALLATION_RATE,
+)
+from objects.kitchen import (
+    kitchen_materials_rows,
+    kitchen_labor_rows,
+    kitchen_overhead_rows,
+)
 
 
 st.set_page_config(
@@ -18,9 +61,10 @@ st.set_page_config(
 
 COMPANY_NAME = "8DOOR"
 
-# -----------------------------
-# data
-# -----------------------------
+
+# -----------------------------------------------------------------------------
+# Static demo data and object defaults
+# -----------------------------------------------------------------------------
 
 def detect_file_type(filename: str) -> str:
     suffix = Path(filename).suffix.lower()
@@ -99,127 +143,34 @@ def default_objects():
     }
 
 
+def suggested_sale_price(self_cost):
+    return round(self_cost * (1 + SALE_PRICE_MARKUP_RATE))
+
+
+def suggested_markup_label():
+    return f"suggested: SC + {int(SALE_PRICE_MARKUP_RATE * 100)}%"
+
+
 def object_demo_costs():
+    preliminary = {
+        "kitchen": 25_805,
+        "kitchen_island": 20_400,
+        "wall_shelf": 9_800,
+    }
+
     return {
-        "kitchen": {
-            "unit_cost": 249_348,
-            "suggested_price": round(249_348 * 1.30),
-        },
-        "kitchen_island": {
-            "unit_cost": 196_414,
-            "suggested_price": round(196_414 * 1.30),
-        },
-        "wall_shelf": {
-            "unit_cost": 97_521,
-            "suggested_price": round(97_521 * 1.30),
-        },
-    }    
-
-
-def object_materials(object_key: str):
-    data = {
-        "kitchen": [
-            ["carpentry", "Formica Birman 2650 interior", "allowance", "₪8,600", "detected"],
-            ["metal", "Stainless steel exterior panels", "allowance", "₪14,800", "supplier missing"],
-            ["hardware", "Handles / hinges / slides", "allowance", "₪4,800", "quantity review"],
-            ["consumables", "glue / screws / sanding / protection", "lot", "₪2,200", "auto-added"],
-        ],
-        "kitchen_island": [
-            ["carpentry", "Formica Birman 2650 interior", "allowance", "₪6,900", "detected"],
-            ["metal", "Stainless steel exterior panels", "allowance", "₪11,200", "supplier missing"],
-            ["stone", "Laba Rosa countertop", "allowance", "₪16,800", "supplier missing"],
-            ["hardware", "Handles / hinges / slides", "allowance", "₪3,400", "quantity review"],
-            ["consumables", "glue / screws / sanding / protection", "lot", "₪1,800", "auto-added"],
-        ],
-        "wall_shelf": [
-            ["carpentry", "Oak veneer NextDoor", "allowance", "₪7,200", "detected"],
-            ["metal", "Corten partitions / metal elements", "allowance", "₪5,600", "supplier missing"],
-            ["hardware", "Mounting hardware", "allowance", "₪1,300", "review"],
-            ["consumables", "glue / screws / sanding / protection", "lot", "₪900", "auto-added"],
-        ],
+        object_key: {
+            "unit_cost": unit_cost,
+            "suggested_price": suggested_sale_price(unit_cost),
+        }
+        for object_key, unit_cost in preliminary.items()
     }
-
-    return pd.DataFrame(
-        data[object_key],
-        columns=["group", "material", "qty / basis", "cost", "status"],
-    )
-
-
-def object_labor(object_key: str):
-    data = {
-        "kitchen": [
-            ["drawing review", "estimator / PM", 3, "₪180", "₪540"],
-            ["cutting", "carpenter", 7, "₪160", "₪1,120"],
-            ["drilling / machining", "carpenter / CNC", 8, "₪170", "₪1,360"],
-            ["assembly", "carpenter", 18, "₪160", "₪2,880"],
-            ["test assembly", "carpenter", 6, "₪160", "₪960"],
-            ["disassembly", "carpenter", 3, "₪160", "₪480"],
-            ["packing", "worker", 4, "₪120", "₪480"],
-        ],
-        "kitchen_island": [
-            ["drawing review", "estimator / PM", 2, "₪180", "₪360"],
-            ["cutting", "carpenter", 5, "₪160", "₪800"],
-            ["drilling / machining", "carpenter / CNC", 6, "₪170", "₪1,020"],
-            ["assembly", "carpenter", 13, "₪160", "₪2,080"],
-            ["test assembly", "carpenter", 4, "₪160", "₪640"],
-            ["packing", "worker", 3, "₪120", "₪360"],
-        ],
-        "wall_shelf": [
-            ["drawing review", "estimator / PM", 2, "₪180", "₪360"],
-            ["cutting", "carpenter", 4, "₪160", "₪640"],
-            ["veneer work", "carpenter", 7, "₪160", "₪1,120"],
-            ["metal / corten coordination", "metal worker", 4, "₪180", "₪720"],
-            ["assembly", "carpenter", 8, "₪160", "₪1,280"],
-            ["packing", "worker", 2, "₪120", "₪240"],
-        ],
-    }
-
-    return pd.DataFrame(
-        data[object_key],
-        columns=["process", "role", "hours", "rate", "cost"],
-    )
-
-
-def object_cost_breakdown(object_key: str):
-    data = {
-        "kitchen": [
-            ["materials", 48900],
-            ["consumables", 2200],
-            ["labor", 7820],
-            ["machine consumables", 1600],
-            ["equipment depreciation", 1900],
-            ["subcontractors", 6400],
-            ["internal transport", 980],
-            ["overhead allocation", 2500],
-        ],
-        "kitchen_island": [
-            ["materials", 40100],
-            ["consumables", 1800],
-            ["labor", 5260],
-            ["machine consumables", 1200],
-            ["equipment depreciation", 1500],
-            ["subcontractors", 5700],
-            ["internal transport", 720],
-            ["overhead allocation", 1820],
-        ],
-        "wall_shelf": [
-            ["materials", 15000],
-            ["consumables", 900],
-            ["labor", 4360],
-            ["machine consumables", 600],
-            ["equipment depreciation", 850],
-            ["subcontractors", 1700],
-            ["internal transport", 390],
-            ["overhead allocation", 800],
-        ],
-    }
-
-    return pd.DataFrame(data[object_key], columns=["cost block", "amount"])
 
 
 def ensure_objects_state():
     if "objects" not in st.session_state:
         st.session_state.objects = default_objects()
+
 
 def ensure_detection_state():
     ensure_objects_state()
@@ -229,16 +180,10 @@ def ensure_detection_state():
             key: obj["name"] for key, obj in st.session_state.objects.items()
         }
 
-    if "objects_confirmed" not in st.session_state:
-        st.session_state.objects_confirmed = False
 
-    if "confirm_detection_error" not in st.session_state:
-        st.session_state.confirm_detection_error = False
-
-
-# -----------------------------
-# helpers
-# -----------------------------
+# -----------------------------------------------------------------------------
+# Shared UI and dataframe helpers
+# -----------------------------------------------------------------------------
 
 def nav_buttons(back_screen: str | None, next_screen: str | None, next_label: str = "Continue"):
     st.markdown("<br>", unsafe_allow_html=True)
@@ -246,14 +191,14 @@ def nav_buttons(back_screen: str | None, next_screen: str | None, next_label: st
     col1, col2 = st.columns([1, 1])
 
     if back_screen:
-        if col1.button("Back", key=f"nav_back_{back_screen}_{next_screen}", use_container_width=True):
+        if col1.button("Back", key=f"nav_back_{back_screen}_{next_screen}", width="stretch"):
             st.session_state.screen = back_screen
             st.rerun()
     else:
         col1.empty()
 
     if next_screen:
-        if col2.button(next_label, key=f"nav_next_{back_screen}_{next_screen}", use_container_width=True):
+        if col2.button(next_label, key=f"nav_next_{back_screen}_{next_screen}", width="stretch"):
             st.session_state.screen = next_screen
             st.rerun()
     else:
@@ -283,11 +228,711 @@ def render_screen_header(title: str, subtitle: str | None = None):
         )
 
 
+def safe_float(value, fallback=0):
+    if value is None:
+        return fallback
 
-# -----------------------------
-# screens
-# -----------------------------
+    if isinstance(value, (int, float)):
+        return float(value)
 
+    cleaned = (
+        str(value)
+        .replace("₪", "")
+        .replace(",", "")
+        .replace("\u00A0", "")
+        .strip()
+    )
+
+    try:
+        return float(cleaned)
+    except ValueError:
+        return fallback
+
+
+def df_changed(old_df: pd.DataFrame, new_df: pd.DataFrame) -> bool:
+    old = old_df.reset_index(drop=True).copy()
+    new = new_df.reset_index(drop=True).copy()
+
+    if list(old.columns) != list(new.columns):
+        return True
+
+    if len(old) != len(new):
+        return True
+
+    numeric_cols = {
+        "Unit Cost",
+        "Qty",
+        "Hours",
+        "Rate",
+        "Monthly Cost",
+        "Cost",
+    }
+
+    for col in old.columns:
+        if col in numeric_cols:
+            old_values = [round(safe_float(v), 4) for v in old[col].tolist()]
+            new_values = [round(safe_float(v), 4) for v in new[col].tolist()]
+        else:
+            old_values = [str(v).strip() for v in old[col].tolist()]
+            new_values = [str(v).strip() for v in new[col].tolist()]
+
+        if old_values != new_values:
+            return True
+
+    return False
+
+
+def update_editor_state_and_rerun(state_key: str, edited_df: pd.DataFrame, drop_columns: list[str] | None = None):
+    if drop_columns is None:
+        drop_columns = []
+
+    clean_df = edited_df.drop(columns=drop_columns, errors="ignore").reset_index(drop=True)
+    old_df = st.session_state[state_key].reset_index(drop=True)
+
+    if df_changed(old_df, clean_df):
+        st.session_state[state_key] = clean_df
+        st.rerun()
+
+
+def section_header(title, left_label, left_value, mid_label, mid_value, right_label, right_value):
+    st.markdown(
+        f"""
+        <div class="object-section-header">
+            <div class="object-section-title">{title}</div>
+            <div class="object-section-metrics">
+                <div class="object-section-metric">
+                    <div class="object-section-metric-label">{left_label}</div>
+                    <div class="object-section-metric-value">{format_money(left_value)}</div>
+                </div>
+                <div class="object-section-metric">
+                    <div class="object-section-metric-label">{mid_label}</div>
+                    <div class="object-section-metric-value">{format_money(mid_value)}</div>
+                </div>
+                <div class="object-section-metric object-section-metric-total">
+                    <div class="object-section-metric-label">{right_label}</div>
+                    <div class="object-section-metric-value">{format_money(right_value)}</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# -----------------------------------------------------------------------------
+# Kitchen editor state and cost-calculation helpers
+# -----------------------------------------------------------------------------
+
+def init_kitchen_editor_state():
+    if "kitchen_materials_editor_df" not in st.session_state:
+        rows = []
+
+        for row in kitchen_materials_rows():
+            rows.append(
+                {
+                    "Category": row["category"],
+                    "Item": row["item"],
+                    "Unit": row["unit"],
+                    "Unit Cost": row["unit_price"],
+                    "Qty": row["qty"],
+                }
+            )
+
+        st.session_state.kitchen_materials_editor_df = pd.DataFrame(rows)
+
+    if "kitchen_labor_editor_df" not in st.session_state:
+        rows = []
+
+        for row in kitchen_labor_rows():
+            rows.append(
+                {
+                    "Group": row["group"],
+                    "Work": row["work"],
+                    "Role": row["role"],
+                    "Hours": row["hours"],
+                    "Rate": row["rate"],
+                }
+            )
+
+        base_labor_df = pd.DataFrame(rows)
+        direct_hours = base_labor_df["Hours"].apply(safe_float).sum()
+        direct_cost = (base_labor_df["Hours"].apply(safe_float) * base_labor_df["Rate"].apply(safe_float)).sum()
+
+        contingency_hours = round(direct_hours * 0.10, 1)
+        contingency_rate = round(direct_cost / direct_hours) if direct_hours else 0
+
+        rows.append(
+            {
+                "Group": "contingency",
+                "Work": "Production contingency 10%",
+                "Role": "all roles",
+                "Hours": contingency_hours,
+                "Rate": contingency_rate,
+            }
+        )
+
+        st.session_state.kitchen_labor_editor_df = pd.DataFrame(rows)
+
+    if "kitchen_overhead_editor_df" not in st.session_state:
+        rows = []
+
+        for row in kitchen_overhead_rows():
+            rows.append(
+                {
+                    "Group": row["group"],
+                    "Monthly Cost": row["monthly_cost"],
+                    "Allocation": row["allocation"],
+                    "VAT": "yes" if row["vat_applicable"] else "no",
+                    "Cost": row["object_cost"],
+                }
+            )
+
+        st.session_state.kitchen_overhead_editor_df = pd.DataFrame(rows)
+
+
+def add_material_cost_column(df: pd.DataFrame) -> pd.DataFrame:
+    result = df.copy()
+
+    result["Unit Cost"] = result["Unit Cost"].apply(safe_float)
+    result["Qty"] = result["Qty"].apply(safe_float)
+    result["Cost"] = (result["Unit Cost"] * result["Qty"]).round().astype(int)
+
+    return result
+
+
+def add_labor_cost_column(df: pd.DataFrame) -> pd.DataFrame:
+    result = df.copy()
+
+    result["Hours"] = result["Hours"].apply(safe_float)
+    result["Rate"] = result["Rate"].apply(safe_float)
+    result["Cost"] = (result["Hours"] * result["Rate"]).round().astype(int)
+
+    return result
+
+
+def normalize_overhead_df(df: pd.DataFrame) -> pd.DataFrame:
+    result = df.copy()
+
+    result["Monthly Cost"] = result["Monthly Cost"].apply(safe_float)
+    result["Cost"] = result["Cost"].apply(safe_float).round().astype(int)
+
+    return result
+
+
+def vat_from_taxable_rows(df: pd.DataFrame, cost_col="Cost", vat_col="VAT") -> int:
+    if df is None or cost_col not in df or vat_col not in df:
+        return 0
+
+    taxable = df[df[vat_col].astype(str).str.lower().eq("yes")]
+    return round(taxable[cost_col].apply(safe_float).sum() * VAT_RATE)
+
+# -----------------------------------------------------------------------------
+# Kitchen AG Grid grouping helpers
+# -----------------------------------------------------------------------------
+
+MATERIAL_GROUP_ORDER = [
+    "Sheet materials",
+    "Hardware",
+    "Consumables / fixings",
+    "Packaging",
+]
+
+LABOR_GROUP_ORDER = [
+    "Technical prep / production files",
+    "CNC operations",
+    "Carpentry",
+    "Metalworks",
+    "Assembly",
+    "Packaging / dispatch",
+    "Production contingency",
+]
+
+OVERHEAD_GROUP_ORDER = [
+    "Back-office payroll (no VAT)",
+    "Facility / rent / municipal",
+    "Utilities / production running / safety",
+    "Equipment / machine overhead",
+    "Software / shop supplies / waste",
+    "Project reserves (no VAT)",
+]
+
+
+def require_aggrid():
+    if AgGrid is None:
+        st.error(
+            "streamlit-aggrid is not installed. Install it with: pip install streamlit-aggrid"
+        )
+        st.stop()
+
+
+def material_display_group(row) -> str:
+    category = str(row.get("Category", "")).lower()
+    item = str(row.get("Item", "")).lower()
+
+    if "hardware" in category:
+        return "Hardware"
+
+    if "packaging" in category:
+        return "Packaging"
+
+    if (
+        "consumable" in category
+        or "edge banding" in item
+        or "fixing" in item
+        or "fixings" in item
+        or "glue" in item
+        or "sealant" in item
+    ):
+        return "Consumables / fixings"
+
+    return "Sheet materials"
+
+
+def labor_display_group(row) -> str:
+    group = str(row.get("Group", "")).lower()
+    work = str(row.get("Work", "")).lower()
+    role = str(row.get("Role", "")).lower()
+
+    if "contingency" in group or "contingency" in work:
+        return "Production contingency"
+
+    if "cnc" in work or "cnc" in role:
+        return "CNC operations"
+
+    if "drawing" in work or "laser file" in work or "production file" in work:
+        return "Technical prep / production files"
+
+    if (
+        "laser cutting" in work
+        or "bending" in work
+        or "countertop" in work
+        or "backsplash" in work
+        or "toe kick" in work
+        or "metal qa" in work
+        or "metal cleaning" in work
+    ):
+        return "Metalworks"
+
+    if (
+        "carcass" in work
+        or "drawer box" in work
+        or "assembly" in work
+        or "fitting" in work
+        or "test fit" in work
+        or "disassembly" in work
+    ):
+        return "Assembly"
+
+    if (
+        "packing" in group
+        or "packing" in work
+        or "labeling" in work
+        or "loading" in work
+        or "dispatch" in work
+    ):
+        return "Packaging / dispatch"
+
+    return "Carpentry"
+
+
+def overhead_display_group(row) -> str:
+    group = str(row.get("Group", "")).lower()
+
+    if "back office" in group or "payroll" in group:
+        return "Back-office payroll (no VAT)"
+
+    if "facility" in group or "rent" in group:
+        return "Facility / rent / municipal"
+
+    if "utilities" in group or "electricity" in group:
+        return "Utilities / production running / safety"
+
+    if "equipment" in group or "machine" in group:
+        return "Equipment / machine overhead"
+
+    if (
+        "software" in group
+        or "admin" in group
+        or "shop operations" in group
+        or "supplies" in group
+        or "waste" in group
+        or "insurance" in group
+    ):
+        return "Software / shop supplies / waste"
+
+    return "Project reserves (no VAT)"
+
+
+def order_grouped_rows(df: pd.DataFrame, group_col: str, group_order: list[str]) -> pd.DataFrame:
+    result = df.copy()
+    order_map = {group_name: index for index, group_name in enumerate(group_order)}
+    result["_group_order"] = result[group_col].map(order_map).fillna(len(group_order)).astype(int)
+    result["_row_order"] = range(len(result))
+    result = result.sort_values(["_group_order", "_row_order"]).reset_index(drop=True)
+    return result.drop(columns=["_group_order", "_row_order"], errors="ignore")
+
+
+def update_aggrid_state_and_rerun(
+    state_key: str,
+    response: dict,
+    drop_columns: list[str] | None = None,
+    ):
+    if drop_columns is None:
+        drop_columns = []
+
+    if not response or "data" not in response:
+        return
+
+    edited_df = pd.DataFrame(response["data"])
+
+    if edited_df.empty:
+        return
+
+    clean_df = edited_df.drop(columns=drop_columns, errors="ignore").reset_index(drop=True)
+    old_df = st.session_state[state_key].reset_index(drop=True)
+
+    if df_changed(old_df, clean_df):
+        st.session_state[state_key] = clean_df
+        st.rerun()
+
+def render_aggrid_editor(
+    df: pd.DataFrame,
+    key: str,
+    group_col: str,
+    auto_group_leaf_field: str,
+    editable_columns: list[str],
+    numeric_sum_columns: list[str],
+    hidden_columns: list[str] | None = None,
+    visible_group_count: int | None = None,
+    cost_formula: str | None = None,
+):
+    require_aggrid()
+
+    if hidden_columns is None:
+        hidden_columns = []
+
+    gb = GridOptionsBuilder.from_dataframe(df)
+
+    gb.configure_default_column(
+        editable=False,
+        filter=False,
+        sortable=False,
+        resizable=True,
+        suppressMenu=True,
+        suppressHeaderMenuButton=True,
+        suppressHeaderFilterButton=True,
+        floatingFilter=False,
+        cellClass="ag-text-cell",
+        headerClass="ag-left-header",
+    )
+
+    gb.configure_column(
+        group_col,
+        rowGroup=True,
+        hide=True,
+        filter=False,
+        sortable=False,
+        suppressMenu=True,
+        suppressHeaderMenuButton=True,
+        suppressHeaderFilterButton=True,
+    )
+
+    for col in hidden_columns:
+        if col in df.columns:
+            gb.configure_column(
+                col,
+                hide=True,
+                filter=False,
+                sortable=False,
+                suppressMenu=True,
+                suppressHeaderMenuButton=True,
+                suppressHeaderFilterButton=True,
+            )
+
+    if auto_group_leaf_field in df.columns:
+        gb.configure_column(
+            auto_group_leaf_field,
+            hide=True,
+            filter=False,
+            sortable=False,
+            suppressMenu=True,
+            suppressHeaderMenuButton=True,
+            suppressHeaderFilterButton=True,
+        )
+
+    for col in editable_columns:
+        if col in df.columns:
+            gb.configure_column(
+                col,
+                editable=True,
+                filter=False,
+                sortable=False,
+                suppressMenu=True,
+                suppressHeaderMenuButton=True,
+                suppressHeaderFilterButton=True,
+            )
+
+    number_parser = JsCode(
+        """
+        function(params) {
+            const value = params.newValue;
+            if (value === null || value === undefined || value === '') return 0;
+            return Number(String(value).replace(/[₪,\u00A0]/g, '').trim()) || 0;
+        }
+        """
+    )
+
+    hide_group_total_when_open = JsCode(
+        """
+        function(params) {
+            if (params.node && params.node.group && params.node.expanded) {
+                return "";
+            }
+
+            if (params.value === null || params.value === undefined || params.value === "") {
+                return "";
+            }
+
+            return params.value;
+        }
+        """
+    )
+
+    for col in numeric_sum_columns:
+        if col in df.columns:
+            gb.configure_column(
+                col,
+                aggFunc="sum",
+                valueParser=number_parser,
+                cellRenderer=hide_group_total_when_open,
+                cellClass="ag-number-cell",
+                headerClass="ag-center-header",
+                filter=False,
+                sortable=False,
+                suppressMenu=True,
+                suppressHeaderMenuButton=True,
+                suppressHeaderFilterButton=True,
+            )
+
+    if "Allocation" in df.columns:
+        gb.configure_column(
+            "Allocation",
+            editable=False,
+            cellClass="ag-number-cell",
+            headerClass="ag-center-header",
+            filter=False,
+            sortable=False,
+            suppressMenu=True,
+            suppressHeaderMenuButton=True,
+            suppressHeaderFilterButton=True,
+        )
+
+    if cost_formula == "materials":
+        gb.configure_column(
+            "Cost",
+            aggFunc="sum",
+            editable=False,
+            valueGetter=JsCode(
+                """
+                function(params) {
+                    if (params.node.group) {
+                        return params.node.aggData && params.node.aggData.Cost;
+                    }
+
+                    const unitCost = Number(params.data["Unit Cost"]) || 0;
+                    const qty = Number(params.data["Qty"]) || 0;
+
+                    return Math.round(unitCost * qty);
+                }
+                """
+            ),
+            cellRenderer=hide_group_total_when_open,
+            cellClass="ag-number-cell",
+            headerClass="ag-center-header",
+            filter=False,
+            sortable=False,
+            suppressMenu=True,
+            suppressHeaderMenuButton=True,
+            suppressHeaderFilterButton=True,
+        )
+
+    if cost_formula == "labor":
+        gb.configure_column(
+            "Cost",
+            aggFunc="sum",
+            editable=False,
+            valueGetter=JsCode(
+                """
+                function(params) {
+                    if (params.node.group) {
+                        return params.node.aggData && params.node.aggData.Cost;
+                    }
+
+                    const hours = Number(params.data["Hours"]) || 0;
+                    const rate = Number(params.data["Rate"]) || 0;
+
+                    return Math.round(hours * rate);
+                }
+                """
+            ),
+            cellRenderer=hide_group_total_when_open,
+            cellClass="ag-number-cell",
+            headerClass="ag-center-header",
+            filter=False,
+            sortable=False,
+            suppressMenu=True,
+            suppressHeaderMenuButton=True,
+            suppressHeaderFilterButton=True,
+        )
+
+    if cost_formula == "overhead":
+        gb.configure_column(
+            "Cost",
+            aggFunc="sum",
+            editable=False,
+            valueGetter=JsCode(
+                """
+                function(params) {
+                    if (params.node.group) {
+                        return params.node.aggData && params.node.aggData.Cost;
+                    }
+
+                    const monthlyCost = Number(params.data["Monthly Cost"]) || 0;
+                    const allocation = String(params.data["Allocation"] || "");
+                    const match = allocation.match(/([0-9.]+)h\\s*\\/\\s*([0-9.]+)h/);
+
+                    if (monthlyCost && match) {
+                        const objectHours = Number(match[1]) || 0;
+                        const capacityHours = Number(match[2]) || 1;
+                        return Math.round(monthlyCost / capacityHours * objectHours);
+                    }
+
+                    return Number(params.data["Cost"]) || 0;
+                }
+                """
+            ),
+            cellRenderer=hide_group_total_when_open,
+            cellClass="ag-number-cell",
+            headerClass="ag-center-header",
+            filter=False,
+            sortable=False,
+            suppressMenu=True,
+            suppressHeaderMenuButton=True,
+            suppressHeaderFilterButton=True,
+        )
+
+    refresh_js = JsCode(
+        """
+        function(params) {
+            params.api.refreshCells({force: true});
+            params.api.resetRowHeights();
+        }
+        """
+    )
+
+    gb.configure_grid_options(
+        autoGroupColumnDef={
+            "headerName": "",
+            "field": auto_group_leaf_field,
+            "minWidth": 320,
+            "suppressMenu": True,
+            "suppressHeaderMenuButton": True,
+            "suppressHeaderFilterButton": True,
+            "filter": False,
+            "sortable": False,
+            "cellRendererParams": {
+                "suppressCount": True,
+            },
+            "cellClass": "ag-text-cell",
+            "headerClass": "ag-left-header",
+        },
+        groupDefaultExpanded=0,
+        groupSuppressBlankHeader=True,
+        suppressAggFuncInHeader=True,
+        suppressMenuHide=True,
+        stopEditingWhenCellsLoseFocus=True,
+        singleClickEdit=True,
+        headerHeight=36,
+        rowHeight=38,
+        domLayout="autoHeight",
+        onCellValueChanged=refresh_js,
+        onRowGroupOpened=refresh_js,
+    )
+
+    grid_options = gb.build()
+
+    initial_visible_rows = visible_group_count or len(df)
+    initial_grid_height = 36 + 38 * initial_visible_rows + 2
+
+    custom_css = {
+        ".ag-root-wrapper": {
+            "border-radius": "10px !important",
+        },
+        ".ag-root-wrapper-body": {
+            "min-height": "0 !important",
+        },
+        ".ag-layout-auto-height": {
+            "min-height": "0 !important",
+        },
+        ".ag-layout-auto-height .ag-center-cols-viewport": {
+            "min-height": "0 !important",
+        },
+        ".ag-layout-auto-height .ag-center-cols-container": {
+            "min-height": "0 !important",
+        },
+        ".ag-header-cell-menu-button": {
+            "display": "none !important",
+        },
+        ".ag-header-icon": {
+            "display": "none !important",
+        },
+        ".ag-header-cell-label": {
+            "justify-content": "flex-start !important",
+        },
+        ".ag-header-cell.ag-center-header .ag-header-cell-label": {
+            "justify-content": "center !important",
+        },
+        ".ag-cell": {
+            "display": "flex !important",
+            "align-items": "center !important",
+        },
+        ".ag-text-cell": {
+            "justify-content": "flex-start !important",
+            "text-align": "left !important",
+        },
+        ".ag-number-cell": {
+            "justify-content": "center !important",
+            "text-align": "center !important",
+        },
+        ".ag-right-aligned-cell": {
+            "justify-content": "center !important",
+            "text-align": "center !important",
+        },
+        ".ag-header-cell.ag-right-aligned-header .ag-header-cell-label": {
+            "justify-content": "center !important",
+        },
+    }
+
+    return AgGrid(
+        df,
+        gridOptions=grid_options,
+        key=key,
+        theme="balham",
+        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+        update_mode=GridUpdateMode.VALUE_CHANGED,
+        allow_unsafe_jscode=True,
+        fit_columns_on_grid_load=True,
+        enable_enterprise_modules=True,
+        reload_data=False,
+        custom_css=custom_css,
+        height=initial_grid_height,
+    )
+
+#-----------------------------------------------------------------------------
+# Streamlit screens
+# -----------------------------------------------------------------------------
+
+# First screen: upload RFQ / drawing package.
 def render_upload_screen():
     st.markdown(
         """
@@ -357,6 +1002,8 @@ def render_upload_screen():
         st.session_state.screen = "processing"
         st.rerun()
 
+
+# Processing animation before the objects workspace.
 def render_estimate_processing_screen():
     render_screen_header("Preparing object estimates")
 
@@ -386,6 +1033,7 @@ def render_estimate_processing_screen():
     st.rerun()
 
 
+# File review screen: preview + detected objects + metadata.
 def render_processing_screen():
     ensure_detection_state()
 
@@ -517,7 +1165,7 @@ def render_processing_screen():
     b0, b1 = st.columns([1, 1])
 
     with b0:
-        if st.button("Back", key="processing_back", use_container_width=True):
+        if st.button("Back", key="processing_back", width="stretch"):
             st.session_state.metadata_extracted = False
             st.session_state.screen = "upload"
             st.rerun()
@@ -526,7 +1174,7 @@ def render_processing_screen():
         if st.button(
             "Confirm object detection → Estimate",
             key="confirm_objects_continue",
-            use_container_width=True,
+            width="stretch",
         ):
             for object_key, name in st.session_state.detected_object_names.items():
                 if object_key in st.session_state.objects:
@@ -536,6 +1184,7 @@ def render_processing_screen():
             st.rerun()
 
 
+# Objects summary screen: object rows, project-level costs, and proposal CTA.
 def render_objects_screen():
     ensure_objects_state()
 
@@ -579,17 +1228,29 @@ def render_objects_screen():
 
     for object_key, obj in st.session_state.objects.items():
         cost = demo_costs.get(object_key, {})
-        unit_cost = cost.get("unit_cost", obj.get("unit_cost") or 0)
-        suggested_price = cost.get("suggested_price", obj.get("suggested_price") or 0)
+
+        if obj.get("approved") and obj.get("unit_cost"):
+            unit_cost = obj["unit_cost"]
+            suggested_price = obj.get("suggested_price") or round(unit_cost * 1.30)
+        else:
+            unit_cost = cost.get("unit_cost", obj.get("unit_cost") or 0)
+            suggested_price = cost.get("suggested_price", obj.get("suggested_price") or 0)
 
         obj["unit_cost"] = unit_cost
         obj["suggested_price"] = suggested_price
 
         input_key = f"sale_price_input_{object_key}"
+        input_source_key = f"{input_key}_unit_cost_source"
 
         if input_key not in st.session_state:
             current_sale_price = obj.get("sale_price") or suggested_price
             st.session_state[input_key] = format_money(current_sale_price)
+            st.session_state[input_source_key] = unit_cost
+
+        if obj.get("approved") and st.session_state.get(input_source_key) != unit_cost:
+            current_sale_price = obj.get("sale_price") or suggested_price
+            st.session_state[input_key] = format_money(current_sale_price)
+            st.session_state[input_source_key] = unit_cost
 
         c0, c1, c2, c3, c4, c_spacer, c5 = st.columns(object_col_weights)
 
@@ -648,7 +1309,15 @@ def render_objects_screen():
         with c5:
             st.markdown("<div class='review-button-offset'></div>", unsafe_allow_html=True)
 
-            if st.button("Review", key=f"review_{object_key}", use_container_width=True):
+            review_label = "Done" if obj.get("approved") else "Review"
+            review_type = "primary" if obj.get("approved") else "secondary"
+
+            if st.button(
+                review_label,
+                key=f"review_{object_key}",
+                width="stretch",
+                type=review_type,
+            ):
                 st.session_state.current_object = object_key
                 st.session_state.screen = "object_detail"
                 st.rerun()
@@ -797,78 +1466,288 @@ def render_objects_screen():
     b0, b1 = st.columns([1, 1])
 
     with b0:
-        if st.button("Back", key="objects_back", use_container_width=True):
+        if st.button("Back", key="objects_back", width="stretch"):
             st.session_state.screen = "processing"
             st.rerun()
 
     with b1:
-        if st.button("Generate proposal", key="generate_proposal", use_container_width=True):
+        if st.button("Generate proposal", key="generate_proposal", width="stretch"):
             st.session_state.screen = "proposal"
             st.rerun()
 
 
+# Object detail screen. In the old code, only Kitchen has a real card.
 def render_object_detail_screen():
     ensure_objects_state()
+    init_kitchen_editor_state()
 
     object_key = st.session_state.get("current_object", "kitchen")
     obj = st.session_state.objects.get(object_key, st.session_state.objects["kitchen"])
 
-    render_screen_header(
-        f"Object estimate: {obj['name']}",
-        "Review materials, labor and cost blocks. Approve object cost to return to project summary.",
+    if object_key != "kitchen":
+        render_screen_header(
+            f"Object: {obj['name']}",
+            "This object card will be added next.",
+        )
+
+        if st.button(
+            "Back to objects",
+            key=f"back_to_objects_{object_key}",
+            width="stretch",
+        ):
+            st.session_state.screen = "objects"
+            st.rerun()
+
+        return
+
+    st.markdown(
+        """
+        <style>
+        .kitchen-object-title {
+            font-size: 52px;
+            line-height: 1.05;
+            font-weight: 800;
+            letter-spacing: -1.6px;
+            color: var(--orange);
+            margin: 0 0 18px 0;
+        }
+
+        .kitchen-object-title .kitchen-object-qty {
+            margin-left: 28px;
+            color: var(--orange);
+            opacity: 0.85;
+        }
+
+        .object-detail-buttons-spacer {
+            height: 18px !important;
+        }
+
+        .block-container {
+            padding-bottom: 48px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
     )
 
-    st.markdown("### Preview")
     st.markdown(
         f"""
-        <div class="summary-box">
-            Preview placeholder for <b>{obj["name"]}</b> from drawing package.
+        <div class="kitchen-object-title">
+            Object: {obj["name"]}
+            <span class="kitchen-object-qty">Quantity: {obj.get("qty", 1)}</span>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    base_key = object_key if object_key in object_demo_costs() else "kitchen"
+    # Materials / hardware section
 
-    st.markdown("### Materials and consumables")
-    st.dataframe(object_materials(base_key), use_container_width=True, hide_index=True)
+    materials_source = add_material_cost_column(st.session_state.kitchen_materials_editor_df)
+    materials_cost = round(materials_source["Cost"].sum())
+    materials_vat = round(materials_cost * VAT_RATE)
+    materials_total = materials_cost + materials_vat
 
-    st.markdown("### Labor processes")
-    st.dataframe(object_labor(base_key), use_container_width=True, hide_index=True)
+    section_header(
+        "MATERIAL COST",
+        "Cost",
+        materials_cost,
+        "VAT 18%",
+        materials_vat,
+        "Total",
+        materials_total,
+    )
 
-    st.markdown("### Cost breakdown")
-    breakdown = object_cost_breakdown(base_key)
-    st.dataframe(breakdown, use_container_width=True, hide_index=True)
+    materials_grid = materials_source.copy()
+    materials_grid["_display_group"] = materials_grid.apply(material_display_group, axis=1)
+    materials_grid = order_grouped_rows(
+        materials_grid,
+        group_col="_display_group",
+        group_order=MATERIAL_GROUP_ORDER,
+    )
 
-    demo_costs = object_demo_costs()[base_key]
-    unit_cost = demo_costs["unit_cost"]
-    suggested_price = demo_costs["suggested_price"]
-    sale_price = suggested_price
+    materials_response = render_aggrid_editor(
+        materials_grid,
+        key="kitchen_materials_aggrid",
+        group_col="_display_group",
+        auto_group_leaf_field="Item",
+        editable_columns=["Item", "Unit", "Unit Cost", "Qty"],
+        numeric_sum_columns=["Qty", "Cost"],
+        hidden_columns=["Category"],
+        visible_group_count=len(MATERIAL_GROUP_ORDER),
+        cost_formula="materials",
+    )
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Unit cost", format_money(unit_cost))
-    c2.metric("Suggested price", format_money(suggested_price))
-    c3.metric("Default sale price", format_money(sale_price))
+    update_aggrid_state_and_rerun(
+        "kitchen_materials_editor_df",
+        materials_response,
+        drop_columns=["Cost", "_display_group"],
+    )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    # Labor cost section
 
-    col1, col2 = st.columns([1, 1])
+    labor_source = add_labor_cost_column(st.session_state.kitchen_labor_editor_df)
+    labor_base = round(labor_source["Cost"].sum())
+    employer_load = round(labor_base * EMPLOYER_LOAD_RATE)
+    labor_total = labor_base + employer_load
 
-    if col1.button("Back to objects", key=f"back_to_objects_{object_key}", use_container_width=True):
-        st.session_state.screen = "objects"
-        st.rerun()
+    section_header(
+        "LABOR COST",
+        "Labor",
+        labor_base,
+        "Employer 25%",
+        employer_load,
+        "Total",
+        labor_total,
+    )
 
-    if col2.button(f"Approve {obj['name']}", key=f"approve_object_{object_key}", use_container_width=True):
-        st.session_state.objects[object_key]["approved"] = True
-        st.session_state.objects[object_key]["unit_cost"] = unit_cost
-        st.session_state.objects[object_key]["suggested_price"] = suggested_price
-        st.session_state.objects[object_key]["sale_price"] = sale_price
-        st.session_state.screen = "objects"
-        st.rerun()
+    labor_grid = labor_source.copy()
+    labor_grid["_display_group"] = labor_grid.apply(labor_display_group, axis=1)
+    labor_grid = order_grouped_rows(
+        labor_grid,
+        group_col="_display_group",
+        group_order=LABOR_GROUP_ORDER,
+    )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    labor_response = render_aggrid_editor(
+        labor_grid,
+        key="kitchen_labor_aggrid",
+        group_col="_display_group",
+        auto_group_leaf_field="Work",
+        editable_columns=["Work", "Role", "Hours", "Rate"],
+        numeric_sum_columns=["Hours", "Cost"],
+        hidden_columns=["Group"],
+        visible_group_count=len(LABOR_GROUP_ORDER),
+        cost_formula="labor",
+    )
 
+    update_aggrid_state_and_rerun(
+        "kitchen_labor_editor_df",
+        labor_response,
+        drop_columns=["Cost", "_display_group"],
+    )
 
+    # Overhead section
+
+    overhead_source = normalize_overhead_df(st.session_state.kitchen_overhead_editor_df)
+    overhead_cost = round(overhead_source["Cost"].sum())
+    overhead_vat = vat_from_taxable_rows(overhead_source)
+    overhead_total = overhead_cost + overhead_vat
+
+    section_header(
+        "OVERHEAD",
+        "Cost",
+        overhead_cost,
+        "VAT",
+        overhead_vat,
+        "Total",
+        overhead_total,
+    )
+
+    overhead_grid = overhead_source.copy()
+    overhead_grid["_display_group"] = overhead_grid.apply(overhead_display_group, axis=1)
+    overhead_grid = order_grouped_rows(
+        overhead_grid,
+        group_col="_display_group",
+        group_order=OVERHEAD_GROUP_ORDER,
+    )
+
+    overhead_response = render_aggrid_editor(
+        overhead_grid,
+        key="kitchen_overhead_aggrid",
+        group_col="_display_group",
+        auto_group_leaf_field="Group",
+        editable_columns=["Group", "Monthly Cost", "Cost"],
+        numeric_sum_columns=["Monthly Cost", "Cost"],
+        hidden_columns=["VAT"],
+        visible_group_count=len(OVERHEAD_GROUP_ORDER),
+        cost_formula="overhead",
+    )
+
+    update_aggrid_state_and_rerun(
+        "kitchen_overhead_editor_df",
+        overhead_response,
+        drop_columns=["_display_group"],
+    )
+
+    # Self-cost summary
+
+    self_cost_excl_vat = materials_cost + labor_total + overhead_cost
+    self_cost_vat = materials_vat + overhead_vat
+    self_cost_total = self_cost_excl_vat + self_cost_vat
+
+    st.markdown(
+        f"""
+        <div class="object-final-summary">
+            <div class="object-final-title">KITCHEN SELF COST</div>
+            <div class="object-final-metrics">
+                <div>
+                    <div class="object-final-label">Excl. VAT</div>
+                    <div class="object-final-value">{format_money(self_cost_excl_vat)}</div>
+                </div>
+                <div>
+                    <div class="object-final-label">VAT</div>
+                    <div class="object-final-value">{format_money(self_cost_vat)}</div>
+                </div>
+                <div>
+                    <div class="object-final-label">Total</div>
+                    <div class="object-final-value object-final-total">{format_money(self_cost_total)}</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<div class='object-detail-buttons-spacer'></div>", unsafe_allow_html=True)
+
+    b0, b1 = st.columns([1, 1])
+
+    with b0:
+        if st.button(
+            "Back to objects",
+            key="back_to_objects_kitchen",
+            width="stretch",
+        ):
+            st.session_state.screen = "objects"
+            st.rerun()
+
+    with b1:
+        if st.button(
+            "Approve kitchen estimate",
+            key="approve_kitchen_estimate",
+            width="stretch",
+        ):
+            st.session_state.objects["kitchen"]["approved"] = True
+            st.session_state.objects["kitchen"]["unit_cost"] = self_cost_excl_vat
+            st.session_state.objects["kitchen"]["suggested_price"] = round(self_cost_excl_vat * 1.30)
+            st.session_state.objects["kitchen"]["sale_price"] = round(self_cost_excl_vat * 1.30)
+
+            st.session_state.objects["kitchen"]["materials_cost"] = materials_cost
+            st.session_state.objects["kitchen"]["materials_vat"] = materials_vat
+            st.session_state.objects["kitchen"]["materials_total"] = materials_total
+
+            st.session_state.objects["kitchen"]["labor_base"] = labor_base
+            st.session_state.objects["kitchen"]["employer_load"] = employer_load
+            st.session_state.objects["kitchen"]["labor_total"] = labor_total
+
+            st.session_state.objects["kitchen"]["overhead_cost"] = overhead_cost
+            st.session_state.objects["kitchen"]["overhead_vat"] = overhead_vat
+            st.session_state.objects["kitchen"]["overhead_total"] = overhead_total
+
+            st.session_state.objects["kitchen"]["self_cost_excl_vat"] = self_cost_excl_vat
+            st.session_state.objects["kitchen"]["self_cost_vat"] = self_cost_vat
+            st.session_state.objects["kitchen"]["self_cost_total"] = self_cost_total
+
+            approved_input_key = "sale_price_input_kitchen"
+            approved_source_key = f"{approved_input_key}_unit_cost_source"
+
+            st.session_state[approved_input_key] = format_money(round(self_cost_excl_vat * 1.30))
+            st.session_state[approved_source_key] = self_cost_excl_vat
+
+            st.session_state.screen = "objects"
+            st.rerun()
+
+# Proposal preview screen. This is still a demo markdown preview.
 def render_proposal_screen():
     ensure_objects_state()
 
@@ -879,7 +1758,7 @@ def render_proposal_screen():
 
     objects = st.session_state.objects
     final_price = st.session_state.get(
-        "final_price",
+        "total_price",
         sum(obj["sale_price"] or 0 for obj in objects.values()) + 3500 + 12000,
     )
 
@@ -909,9 +1788,9 @@ def render_proposal_screen():
 
 | line | price |
 |---|---:|
-| Delivery | {format_money(st.session_state.get("delivery", 0))} |
-| Installation | {format_money(st.session_state.get("installation", 0))} |
-| VAT 18% | {format_money(st.session_state.get("vat_amount", 0))} |
+| Delivery | {format_money(st.session_state.get("delivery_price", 0))} |
+| Installation | {format_money(st.session_state.get("installation_price", 0))} |
+| VAT 18% | {format_money(st.session_state.get("vat", 0))} |
 
 ## Final proposal price
 
@@ -952,7 +1831,7 @@ def render_proposal_screen():
         ],
         columns=["category", "item", "qty / basis", "used in", "status"],
     )
-    st.dataframe(purchasing, use_container_width=True, hide_index=True)
+    st.dataframe(purchasing, width="stretch", hide_index=True)
 
     st.markdown("### Production summary")
     production = pd.DataFrame(
@@ -966,20 +1845,20 @@ def render_proposal_screen():
         ],
         columns=["role / department", "hours"],
     )
-    st.dataframe(production, use_container_width=True, hide_index=True)
+    st.dataframe(production, width="stretch", hide_index=True)
 
     nav_buttons("objects", None)
 
-    if st.button("Start over", key="proposal_start_over", use_container_width=True):
+    if st.button("Start over", key="proposal_start_over", width="stretch"):
         st.session_state.clear()
         st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# -----------------------------
-# router
-# -----------------------------
+# -----------------------------------------------------------------------------
+# Router
+# -----------------------------------------------------------------------------
 
 apply_css()
 
