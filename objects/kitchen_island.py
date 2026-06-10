@@ -1,5 +1,6 @@
 import pandas as pd
 
+from pricing import format_money
 from estimate_config import (
     VAT_RATE,
     EMPLOYER_LOAD_RATE,
@@ -13,8 +14,6 @@ from estimate_config import (
     ROLE_RATES,
     MONTHLY_OVERHEAD_ROWS,
 )
-from pricing import format_money
-
 
 def format_unit_price(value):
     if value is None:
@@ -25,89 +24,81 @@ def format_unit_price(value):
 
     return format_money(value)
 
-
 # -----------------------------
-# materials / hardware / packaging
+# materials
 # -----------------------------
 
-def kitchen_materials_rows():
+def kitchen_island_materials_rows():
     return [
                 {
             "category": "sheet materials",
             "item": "Birman 2650 Formica 16 mm",
             "unit": "2.44×1.22 m",
             "unit_price": 280,
-            "qty": 5,
+            "qty": 3,
         },
         {
             "category": "sheet materials",
             "item": "Black back panel 5 mm",
             "unit": "2.44×1.22 m",
             "unit_price": 110,
-            "qty": 2,
-        },
-        {
-            "category": "sheet materials",
-            "item": "Oak veneer board 16 mm",
-            "unit": "2.44×1.22 m",
-            "unit_price": 950,
-            "qty": 2,
+            "qty": 1,
         },
         {
             "category": "sheet materials",
             "item": "Black MDF steel fronts 16 mm",
             "unit": "2.44×1.22 m",
             "unit_price": 1103,
-            "qty": 3,
+            "qty": 2,
         },
         {
             "category": "sheet materials",
             "item": "Steel 304 0.8 mm wrapped fronts",
             "unit": "3.0×1.5 m",
             "unit_price": 520,
-            "qty": 3,
+            "qty": 2,
         },
         {
             "category": "sheet materials",
-            "item": "Steel 304 2 mm countertop / backsplash",
-            "unit": "3.0×1.5 m",
-            "unit_price": 1300,
-            "qty": 2,
+            "item": "Stone Marble Laba Rosa 20 mm",
+            "unit": "sqm",
+            "unit_price": 2200,
+            "qty": 6.3,
         },
         {
             "category": "hardware",
             "item": "Domicile 0583T handles",
             "unit": "pc",
             "unit_price": 36.5,
-            "qty": 12,
+            "qty": 6,
         },
         {
             "category": "hardware",
             "item": "Blum hinges",
             "unit": "pc",
             "unit_price": 16.7,
-            "qty": 16,
+            "qty": 8,
         },
         {
             "category": "hardware",
             "item": "Blum drawer runners",
             "unit": "set",
             "unit_price": 84.3,
-            "qty": 4,
+            "qty": 3,
         },
         {
             "category": "hardware",
             "item": "Adjustable legs",
             "unit": "pc",
             "unit_price": 11.5,
-            "qty": 14,
+            "qty": 10,
         },
         {
             "category": "consumables",
             "item": "Edge banding",
             "unit": "m",
             "unit_price": 8.5,
-            "qty": 60,
+            "qty": 35,
         },
         {
             "category": "consumables",
@@ -117,11 +108,18 @@ def kitchen_materials_rows():
             "qty": 1,
         },
         {
+            "category": "consumables",
+            "item": "Stone adhesive / sealant",
+            "unit": "lot",
+            "unit_price": 250,
+            "qty": 1,
+        },
+        {
             "category": "packaging",
             "item": "Cardboard corner protectors",
             "unit": "pc 2 m",
             "unit_price": 5,
-            "qty": 20,
+            "qty": 14,
         },
         {
             "category": "packaging",
@@ -142,15 +140,15 @@ def kitchen_materials_rows():
             "item": "Packing tape",
             "unit": "roll",
             "unit_price": 8.5,
-            "qty": 3,
+            "qty": 2,
         },
     ]
 
 
-def kitchen_materials_df():
+def kitchen_island_materials_df():
     rows = []
 
-    for row in kitchen_materials_rows():
+    for row in kitchen_island_materials_rows():
         total = round(row["unit_price"] * row["qty"])
 
         rows.append(
@@ -167,9 +165,9 @@ def kitchen_materials_df():
     return pd.DataFrame(rows)
 
 
-def kitchen_materials_totals():
+def kitchen_island_materials_totals():
     subtotal = round(
-        sum(row["unit_price"] * row["qty"] for row in kitchen_materials_rows())
+        sum(row["unit_price"] * row["qty"] for row in kitchen_island_materials_rows())
     )
     vat = round(subtotal * VAT_RATE)
     total = subtotal + vat
@@ -181,102 +179,102 @@ def kitchen_materials_totals():
 # labor / works
 # -----------------------------
 
-def kitchen_labor_rows():
+def kitchen_island_labor_rows():
     return [
-     {       
-            "group": "technical prep",
-            "work": "Site measurement / field survey (project-level)",
-            "role": "project manager",
-            "hours": 4,
-            "rate": 100,
-        },        
         {
             "group": "carpentry / production",
             "work": "CNC nesting / sheet optimization",
             "role": "CNC operator",
-            "hours": 2,
+            "hours": 1.5,
             "rate": ROLE_RATES["CNC operator"],
         },
         {
             "group": "carpentry / production",
             "work": "CNC cutting / drilling / boring",
             "role": "CNC operator",
-            "hours": 8,
+            "hours": 5,
             "rate": ROLE_RATES["CNC operator"],
         },
         {
             "group": "carpentry / production",
             "work": "Edge banding",
             "role": "carpenter",
-            "hours": 5,
+            "hours": 3,
             "rate": ROLE_RATES["carpenter"],
         },
         {
             "group": "carpentry / production",
-            "work": "Carcass / box assembly",
+            "work": "Island carcass / box assembly",
             "role": "carpenter",
-            "hours": 12,
+            "hours": 8,
             "rate": ROLE_RATES["carpenter"],
         },
         {
             "group": "carpentry / production",
             "work": "Drawer box assembly",
             "role": "carpenter",
-            "hours": 4,
+            "hours": 3,
             "rate": ROLE_RATES["carpenter"],
         },
         {
             "group": "carpentry / production",
             "work": "Hinges / runners / legs fitting",
             "role": "carpenter",
-            "hours": 5,
+            "hours": 3,
             "rate": ROLE_RATES["carpenter"],
         },
         {
             "group": "carpentry / production",
-            "work": "Front substrate prep",
+            "work": "Panel substrate prep",
+            "role": "carpenter",
+            "hours": 3,
+            "rate": ROLE_RATES["carpenter"],
+        },
+        {
+            "group": "carpentry / production",
+            "work": "SS panels bonding to substrate",
             "role": "carpenter",
             "hours": 4,
             "rate": ROLE_RATES["carpenter"],
         },
         {
-            "group": "carpentry / production",
-            "work": "SS fronts bonding to substrate",
+            "group": "assembly",
+            "work": "Production pre-assembly / test fit",
+            "role": "carpenter",
+            "hours": 4,
+            "rate": ROLE_RATES["carpenter"],
+        },
+                {
+            "group": "stone work",
+            "work": "Stone CNC cutting / sink and appliance cutouts",
+            "role": "CNC operator",
+            "hours": 6,
+            "rate": ROLE_RATES["CNC operator"],
+        },
+        {
+            "group": "stone work",
+            "work": "Stone edge processing / polishing",
             "role": "carpenter",
             "hours": 6,
             "rate": ROLE_RATES["carpenter"],
         },
         {
-            "group": "carpentry / production",
-            "work": "Production pre-assembly / test fit",
+            "group": "assembly",
+            "work": "Stone fitting / dry fit / final adjustment",
             "role": "carpenter",
-            "hours": 5,
-            "rate": ROLE_RATES["carpenter"],
-        },
-        {
-            "group": "carpentry / production",
-            "work": "Partial disassembly / dispatch prep",
-            "role": "carpenter",
-            "hours": 2,
+            "hours": 3,
             "rate": ROLE_RATES["carpenter"],
         },
         {
             "group": "metal work",
             "work": "Stainless drawings / laser files",
             "role": "metal worker",
-            "hours": 3,
+            "hours": 2,
             "rate": ROLE_RATES["metal worker"],
         },
         {
             "group": "metal work",
             "work": "Laser cutting, 0.8 mm sheets",
-            "role": "metal worker",
-            "hours": 4,
-            "rate": ROLE_RATES["metal worker"],
-        },
-        {
-            "group": "metal work",
-            "work": "Laser cutting, 2 mm sheets",
             "role": "metal worker",
             "hours": 3,
             "rate": ROLE_RATES["metal worker"],
@@ -285,109 +283,61 @@ def kitchen_labor_rows():
             "group": "metal work",
             "work": "Bending / folded edges",
             "role": "metal worker",
-            "hours": 6,
-            "rate": ROLE_RATES["metal worker"],
-        },
-        {
-            "group": "metal work",
-            "work": "Countertop / backsplash dry fit prep",
-            "role": "metal worker",
-            "hours": 3,
-            "rate": ROLE_RATES["metal worker"],
-        },
-        {
-            "group": "metal work",
-            "work": "Toe kick metal prep",
-            "role": "metal worker",
-            "hours": 2,
+            "hours": 4,
             "rate": ROLE_RATES["metal worker"],
         },
         {
             "group": "metal work",
             "work": "Metal QA / cleaning",
             "role": "metal worker",
-            "hours": 2,
+            "hours": 1.5,
             "rate": ROLE_RATES["metal worker"],
         },
         {
             "group": "packing / dispatch",
-            "work": "Packing fronts and panels",
+            "work": "Packing island panels",
             "role": "worker",
-            "hours": 3,
+            "hours": 2,
             "rate": ROLE_RATES["worker"],
         },
         {
             "group": "packing / dispatch",
-            "work": "Packing carcass boxes",
+            "work": "Stone protection / padding",
             "role": "worker",
-            "hours": 3,
+            "hours": 2,
             "rate": ROLE_RATES["worker"],
         },
         {
             "group": "packing / dispatch",
             "work": "Labeling / loading prep",
             "role": "worker",
-            "hours": 2,
+            "hours": 1,
             "rate": ROLE_RATES["worker"],
         },
-                {
+        {
             "group": "packing / dispatch",
             "work": "Truck loading",
             "role": "worker",
-            "hours": 0.5,
+            "hours": 1,
             "rate": ROLE_RATES["worker"],
         },
     ]
 
 
-def kitchen_direct_labor_hours():
-    return sum(row["hours"] for row in kitchen_labor_rows())
+def kitchen_island_direct_labor_hours():
+    return sum(row["hours"] for row in kitchen_island_labor_rows())
 
 
-def kitchen_direct_labor_cost():
-    return sum(row["hours"] * row["rate"] for row in kitchen_labor_rows())
+def kitchen_island_direct_labor_cost():
+    return sum(row["hours"] * row["rate"] for row in kitchen_island_labor_rows())
 
 
-def kitchen_adjusted_labor_hours():
-    return kitchen_direct_labor_hours() * (1 + LABOR_CONTINGENCY_RATE)
+def kitchen_island_adjusted_labor_hours():
+    return kitchen_island_direct_labor_hours() * (1 + LABOR_CONTINGENCY_RATE)
 
 
-def kitchen_labor_df():
-    rows = []
-
-    for row in kitchen_labor_rows():
-        base_cost = round(row["hours"] * row["rate"])
-
-        rows.append(
-            {
-                "group": row["group"],
-                "work": row["work"],
-                "role": row["role"],
-                "hours": row["hours"],
-                "rate": format_money(row["rate"]),
-                "base cost": format_money(base_cost),
-            }
-        )
-
-    contingency_hours = round(kitchen_direct_labor_hours() * LABOR_CONTINGENCY_RATE, 1)
-    contingency_cost = round(kitchen_direct_labor_cost() * LABOR_CONTINGENCY_RATE)
-
-    rows.append(
-        {
-            "group": "contingency",
-            "work": "Production contingency 10%",
-            "role": "all roles",
-            "hours": contingency_hours,
-            "rate": f"{int(LABOR_CONTINGENCY_RATE * 100)}%",
-            "base cost": format_money(contingency_cost),
-        }
-    )
-
-    return pd.DataFrame(rows)
-
-
-def kitchen_labor_totals():
-    direct_cost = kitchen_direct_labor_cost()
+def kitchen_island_labor_totals():
+    direct_cost = kitchen_island_direct_labor_cost()
     contingency_cost = round(direct_cost * LABOR_CONTINGENCY_RATE)
     base_with_contingency = round(direct_cost + contingency_cost)
     employer_load = round(base_with_contingency * EMPLOYER_LOAD_RATE)
@@ -400,12 +350,13 @@ def kitchen_labor_totals():
 # overhead / reserves
 # -----------------------------
 
-def kitchen_monthly_capacity_hours():
+def kitchen_island_monthly_capacity_hours():
     return PRODUCTION_WORKERS * WORKDAYS_PER_MONTH * HOURS_PER_DAY
 
-def kitchen_monthly_overhead_group_rows():
-    monthly_capacity_hours = kitchen_monthly_capacity_hours()
-    object_hours = kitchen_adjusted_labor_hours()
+
+def kitchen_island_monthly_overhead_group_rows():
+    monthly_capacity_hours = kitchen_island_monthly_capacity_hours()
+    object_hours = kitchen_island_adjusted_labor_hours()
 
     rows = []
 
@@ -414,14 +365,8 @@ def kitchen_monthly_overhead_group_rows():
 
         rows.append(
             {
-                # Leaf row visible inside the opened AG Grid group:
-                # Rent, Arnona, Electricity, etc.
                 "group": row["item"],
-
-                # Parent group used only for AG Grid grouping:
-                # Facility / rent / arnona, Utilities / safety, etc.
                 "overhead_group": row["group"],
-
                 "monthly_cost": row["monthly_cost"],
                 "allocation": f"{round(object_hours, 1)}h / {monthly_capacity_hours}h",
                 "vat_applicable": row["vat_applicable"],
@@ -433,11 +378,11 @@ def kitchen_monthly_overhead_group_rows():
     return rows
 
 
-def kitchen_base_cost_before_project_reserves():
-    materials_subtotal, materials_vat, materials_total = kitchen_materials_totals()
-    labor_base, employer_load, labor_total = kitchen_labor_totals()
+def kitchen_island_base_cost_before_project_reserves():
+    materials_subtotal, materials_vat, materials_total = kitchen_island_materials_totals()
+    labor_base, employer_load, labor_total = kitchen_island_labor_totals()
 
-    monthly_rows = kitchen_monthly_overhead_group_rows()
+    monthly_rows = kitchen_island_monthly_overhead_group_rows()
 
     monthly_overhead_cost = round(sum(row["object_cost"] for row in monthly_rows))
     monthly_overhead_taxable = round(
@@ -448,8 +393,8 @@ def kitchen_base_cost_before_project_reserves():
     return materials_total + labor_total + monthly_overhead_cost + monthly_overhead_vat
 
 
-def kitchen_project_reserve_rows():
-    base_cost = kitchen_base_cost_before_project_reserves()
+def kitchen_island_project_reserve_rows():
+    base_cost = kitchen_island_base_cost_before_project_reserves()
 
     return [
         {
@@ -481,51 +426,6 @@ def kitchen_project_reserve_rows():
         },
     ]
 
-def kitchen_overhead_rows():
-    return kitchen_monthly_overhead_group_rows() + kitchen_project_reserve_rows()
 
-
-def kitchen_overhead_df():
-    rows = []
-
-    for row in kitchen_overhead_rows():
-        rows.append(
-            {
-                "group": row["group"],
-                "monthly cost": format_money(row["monthly_cost"]) if row["monthly_cost"] else "—",
-                "allocation": row["allocation"],
-                "VAT": "yes" if row["vat_applicable"] else "no",
-                "kitchen cost": format_money(row["object_cost"]),
-            }
-        )
-
-    return pd.DataFrame(rows)
-
-
-def kitchen_overhead_totals():
-    rows = kitchen_overhead_rows()
-
-    subtotal = round(sum(row["object_cost"] for row in rows))
-    taxable_subtotal = round(
-        sum(row["object_cost"] for row in rows if row["vat_applicable"])
-    )
-    vat = round(taxable_subtotal * VAT_RATE)
-    total = subtotal + vat
-
-    return subtotal, vat, total
-
-
-# -----------------------------
-# self cost
-# -----------------------------
-
-def kitchen_self_cost_totals():
-    materials_subtotal, materials_vat, materials_total = kitchen_materials_totals()
-    labor_base, employer_load, labor_total = kitchen_labor_totals()
-    overhead_subtotal, overhead_vat, overhead_total = kitchen_overhead_totals()
-
-    subtotal_excl_vat = materials_subtotal + labor_total + overhead_subtotal
-    vat_total = materials_vat + overhead_vat
-    total = materials_total + labor_total + overhead_total
-
-    return subtotal_excl_vat, vat_total, total
+def kitchen_island_overhead_rows():
+    return kitchen_island_monthly_overhead_group_rows() + kitchen_island_project_reserve_rows()

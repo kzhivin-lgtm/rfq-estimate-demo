@@ -52,17 +52,6 @@ from objects.kitchen import (
     kitchen_overhead_rows,
 )
 
-from objects.kitchen_island import (
-    kitchen_island_materials_rows,
-    kitchen_island_labor_rows,
-    kitchen_island_overhead_rows,
-)
-
-from objects.wall_shelf import (
-    wall_shelf_materials_rows,
-    wall_shelf_labor_rows,
-    wall_shelf_overhead_rows,
-)
 
 st.set_page_config(
     page_title="RFQ-to-Estimate Demo",
@@ -74,39 +63,6 @@ st.set_page_config(
 
 COMPANY_NAME = "8DOOR"
 
-OBJECT_DETAIL_CONFIG = {
-    "kitchen": {
-        "state_prefix": "kitchen",
-        "self_cost_title": "KITCHEN SELF COST",
-        "approve_label": "Approve kitchen estimate",
-        "preview_path": "assets/kitchen_preview.png",
-        "confidence": 93,
-        "materials_rows": kitchen_materials_rows,
-        "labor_rows": kitchen_labor_rows,
-        "overhead_rows": kitchen_overhead_rows,
-    },
-    "kitchen_island": {
-        "state_prefix": "kitchen_island",
-        "self_cost_title": "KITCHEN ISLAND SELF COST",
-        "approve_label": "Approve kitchen island estimate",
-        "preview_path": "assets/kitchen_island_preview.png",
-        "confidence": 89,
-        "materials_rows": kitchen_island_materials_rows,
-        "labor_rows": kitchen_island_labor_rows,
-        "overhead_rows": kitchen_island_overhead_rows,
-    },
-
-        "wall_shelf": {
-        "state_prefix": "wall_shelf",
-        "self_cost_title": "WALL SHELF SELF COST",
-        "approve_label": "Approve wall shelf estimate",
-        "preview_path": "assets/wall_shelf_preview.png",
-        "confidence": 95,
-        "materials_rows": wall_shelf_materials_rows,
-        "labor_rows": wall_shelf_labor_rows,
-        "overhead_rows": wall_shelf_overhead_rows,
-    },
-}
 
 # -----------------------------------------------------------------------------
 # Static demo data and object defaults
@@ -196,52 +152,20 @@ def suggested_sale_price(self_cost):
 def suggested_markup_label():
     return f"suggested: SC + {int(SALE_PRICE_MARKUP_RATE * 100)}%"
 
-def project_level_self_costs():
-    return {
-        "delivery": 1400,
-        "installation": 5800,
-    }
-
 
 def object_demo_costs():
-    def estimate_initial_self_cost_excl_vat(object_key: str) -> int:
-        config = OBJECT_DETAIL_CONFIG.get(object_key)
-
-        if not config:
-            return 0
-
-        materials_cost = round(
-            sum(
-                row["unit_price"] * row["qty"]
-                for row in config["materials_rows"]()
-            )
-        )
-
-        direct_labor_cost = sum(
-            row["hours"] * row["rate"]
-            for row in config["labor_rows"]()
-        )
-        labor_base = round(direct_labor_cost * (1 + LABOR_CONTINGENCY_RATE))
-        employer_load = round(labor_base * EMPLOYER_LOAD_RATE)
-        labor_total = labor_base + employer_load
-
-        overhead_cost = round(
-            sum(
-                row["object_cost"]
-                for row in config["overhead_rows"]()
-            )
-        )
-
-        return materials_cost + labor_total + overhead_cost
+    preliminary = {
+        "kitchen": 25_805,
+        "kitchen_island": 20_400,
+        "wall_shelf": 9_800,
+    }
 
     return {
         object_key: {
-            "unit_cost": estimate_initial_self_cost_excl_vat(object_key),
-            "suggested_price": suggested_sale_price(
-                estimate_initial_self_cost_excl_vat(object_key)
-            ),
+            "unit_cost": unit_cost,
+            "suggested_price": suggested_sale_price(unit_cost),
         }
-        for object_key in OBJECT_DETAIL_CONFIG
+        for object_key, unit_cost in preliminary.items()
     }
 
 
@@ -437,29 +361,11 @@ def labor_section_header(title, hours_value, labor_cost, employer_load, total):
 # Kitchen editor state and cost-calculation helpers
 # -----------------------------------------------------------------------------
 
-def init_object_editor_state(object_key: str):
-    config = OBJECT_DETAIL_CONFIG[object_key]
-    state_prefix = config["state_prefix"]
-
-    materials_key = f"{state_prefix}_materials_editor_df"
-    labor_key = f"{state_prefix}_labor_editor_df"
-    overhead_key = f"{state_prefix}_overhead_editor_df"
-
-    materials_version_key = f"{state_prefix}_materials_editor_version"
-    labor_version_key = f"{state_prefix}_labor_editor_version"
-    overhead_version_key = f"{state_prefix}_overhead_editor_version"
-
-    materials_version = f"{state_prefix}_materials_v3_normalized_material_names"
-    labor_version = f"{state_prefix}_labor_v2_site_measurement"
-    overhead_version = f"{state_prefix}_overhead_v2_site_measurement"
-
-    if (
-        materials_key not in st.session_state
-        or st.session_state.get(materials_version_key) != materials_version
-    ):
+def init_kitchen_editor_state():
+    if "kitchen_materials_editor_df" not in st.session_state:
         rows = []
 
-        for row in config["materials_rows"]():
+        for row in kitchen_materials_rows():
             rows.append(
                 {
                     "Category": row["category"],
@@ -470,16 +376,17 @@ def init_object_editor_state(object_key: str):
                 }
             )
 
-        st.session_state[materials_key] = pd.DataFrame(rows)
-        st.session_state[materials_version_key] = materials_version
+        st.session_state.kitchen_materials_editor_df = pd.DataFrame(rows)
+
+    kitchen_labor_version = "v2_add_truck_loading"
 
     if (
-        labor_key not in st.session_state
-        or st.session_state.get(labor_version_key) != labor_version
+        "kitchen_labor_editor_df" not in st.session_state
+        or st.session_state.get("kitchen_labor_editor_version") != kitchen_labor_version
     ):
         rows = []
 
-        for row in config["labor_rows"]():
+        for row in kitchen_labor_rows():
             rows.append(
                 {
                     "Group": row["group"],
@@ -510,16 +417,18 @@ def init_object_editor_state(object_key: str):
             }
         )
 
-        st.session_state[labor_key] = pd.DataFrame(rows)
-        st.session_state[labor_version_key] = labor_version
+        st.session_state.kitchen_labor_editor_df = pd.DataFrame(rows)
+        st.session_state.kitchen_labor_editor_version = kitchen_labor_version
+
+    kitchen_overhead_version = "v3_split_overhead_leaf_rows_current_template"
 
     if (
-        overhead_key not in st.session_state
-        or st.session_state.get(overhead_version_key) != overhead_version
+        "kitchen_overhead_editor_df" not in st.session_state
+        or st.session_state.get("kitchen_overhead_editor_version") != kitchen_overhead_version
     ):
         rows = []
 
-        for row in config["overhead_rows"]():
+        for row in kitchen_overhead_rows():
             rows.append(
                 {
                     "Overhead Group": row.get("overhead_group", row["group"]),
@@ -531,12 +440,8 @@ def init_object_editor_state(object_key: str):
                 }
             )
 
-        st.session_state[overhead_key] = pd.DataFrame(rows)
-        st.session_state[overhead_version_key] = overhead_version
-
-
-def init_kitchen_editor_state():
-    init_object_editor_state("kitchen")
+        st.session_state.kitchen_overhead_editor_df = pd.DataFrame(rows)
+        st.session_state.kitchen_overhead_editor_version = kitchen_overhead_version
 
 def add_material_cost_column(df: pd.DataFrame) -> pd.DataFrame:
     result = df.copy()
@@ -647,14 +552,7 @@ def labor_display_group(row) -> str:
     if "cnc" in work or "cnc" in role:
         return "CNC operations"
 
-    if (
-        "drawing" in work
-        or "laser file" in work
-        or "production file" in work
-        or "measurement" in work
-        or "site survey" in work
-        or "field survey" in work
-    ):
+    if "drawing" in work or "laser file" in work or "production file" in work:
         return "Technical prep / production files"
 
     if (
@@ -1036,7 +934,6 @@ def render_aggrid_editor(
             "sortable": False,
             "cellRendererParams": {
                 "suppressCount": True,
-                "suppressPadding": True,
             },
             "cellClass": "ag-text-cell",
             "headerClass": "ag-left-header",
@@ -1155,7 +1052,7 @@ def render_aggrid_editor(
     apply_number_formatters(grid_options.get("columnDefs", []))
 
     initial_visible_rows = visible_group_count or len(df)
-    initial_grid_height = 36 + 38 * initial_visible_rows + 6
+    initial_grid_height = 36 + 38 * initial_visible_rows + 2
 
     custom_css = {
         ".ag-root-wrapper": {
@@ -1386,35 +1283,20 @@ def render_upload_screen():
 
 # Processing animation before the objects workspace.
 def render_estimate_processing_screen():
-    st.markdown(
-        """
-        <style>
-        .stApp:has(.estimate-processing-active) div[data-testid="stButton"] {
-            display: none !important;
-        }
-
-        .stApp:has(.estimate-processing-active) .block-container {
-            padding-bottom: 48px !important;
-        }
-        </style>
-        <div class="estimate-processing-active" style="display:none"></div>
-        """,
-        unsafe_allow_html=True,
-    )
     render_screen_header("Preparing object estimates")
 
     progress = st.progress(0)
     status_placeholder = st.empty()
 
     steps = [
-        "1/8 Decomposing detected objects...",
-        "2/8 Mapping materials and consumables...",
-        "3/8 Estimating carpentry and metal work...",
-        "4/8 Estimating labor processes...",
-        "5/8 Allocating equipment and machine costs...",
-        "6/8 Allocating workshop overhead...",
-        "7/8 Preparing object-level sale price inputs...",
-        "8/8 Estimate workspace ready.",
+        "Decomposing detected objects...",
+        "Mapping materials and consumables...",
+        "Estimating carpentry and metal work...",
+        "Estimating labor processes...",
+        "Allocating equipment and machine costs...",
+        "Allocating workshop overhead...",
+        "Preparing object-level sale price inputs...",
+        "Estimate workspace ready.",
     ]
 
     for i, step in enumerate(steps, start=1):
@@ -1428,23 +1310,10 @@ def render_estimate_processing_screen():
     st.session_state.screen = "objects"
     st.rerun()
 
-def apply_screen_bottom_compact_class(class_name: str):
-    st.markdown(
-        f"""
-        <style>
-        .stApp:has(.{class_name}) .block-container {{
-            padding-bottom: 48px !important;
-        }}
-        </style>
-        <div class="{class_name}" style="display:none"></div>
-        """,
-        unsafe_allow_html=True,
-    )
 
 # File review screen: preview + detected objects + metadata.
 def render_processing_screen():
     ensure_detection_state()
-    apply_screen_bottom_compact_class("processing-screen-compact")
 
     if "metadata_extracted" not in st.session_state:
         st.session_state.metadata_extracted = False
@@ -1456,12 +1325,12 @@ def render_processing_screen():
         status_placeholder = st.empty()
 
         steps = [
-            "1/6 Detecting file type...",
-            "2/6 Reading title block...",
-            "3/6 Extracting project metadata...",
-            "4/6 Detecting drawing pages...",
-            "5/6 Identifying project objects...",
-            "6/6 Project metadata extracted.",
+            "Detecting file type...",
+            "Reading title block...",
+            "Extracting project metadata...",
+            "Detecting drawing pages...",
+            "Identifying project objects...",
+            "Project metadata extracted.",
         ]
 
         for i, step in enumerate(steps, start=1):
@@ -1592,129 +1461,10 @@ def render_processing_screen():
             st.session_state.screen = "estimate_processing"
             st.rerun()
 
-def open_object_detail_from_objects_screen(object_key: str):
-    st.session_state.current_object = object_key
-    st.session_state.screen = "object_detail"
 
 # Objects summary screen: object rows, project-level costs, and proposal CTA.
 def render_objects_screen():
     ensure_objects_state()
-
-    st.markdown(
-        """
-        <style>
-
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] {
-            display: flex !important;
-            justify-content: center !important;
-        }
-
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] > div {
-            width: 188px !important;
-        }
-
-        /* Price input: keep only the actual BaseWeb input white, not every wrapper */
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] div[data-baseweb="input"],
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] div[data-baseweb="base-input"],
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-        }
-
-        /* Actual visible input frame */
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] div[data-baseweb="input"] {
-            height: 40px !important;
-            min-height: 40px !important;
-            border: 1.5px solid #d6d8de !important;
-            border-radius: 10px !important;
-            box-shadow: none !important;
-            outline: none !important;
-            opacity: 1 !important;
-        }
-
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] div[data-baseweb="input"]:hover {
-            border-color: #b8bbc4 !important;
-            box-shadow: none !important;
-        }
-
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] div[data-baseweb="input"]:focus-within {
-            border-color: var(--orange) !important;
-            box-shadow: 0 0 0 2px rgba(242, 115, 69, 0.14) !important;
-            outline: none !important;
-        }
-
-        /* Text field itself */
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input {
-            height: 38px !important;
-            min-height: 38px !important;
-            padding: 0 14px !important;
-
-            border: 0 !important;
-            box-shadow: none !important;
-            outline: none !important;
-
-            color: #20242c !important;
-            font-size: 18px !important;
-            font-weight: 800 !important;
-            line-height: 38px !important;
-            text-align: center !important;
-
-            opacity: 1 !important;
-            -webkit-text-fill-color: #20242c !important;
-        }
-
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input:focus {
-            border: 0 !important;
-            box-shadow: none !important;
-            outline: none !important;
-        }
-
-        /* Prevent grey flash during Streamlit rerun / disabled state */
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"]:has(input:disabled),
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"]:has(input:disabled) *,
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"]:has(input:disabled) div,
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"]:has(input:disabled) span,
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"]:has(input:disabled) input {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            opacity: 1 !important;
-        }
-
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"]:has(input:disabled) div[data-baseweb="input"],
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] div[data-baseweb="input"][aria-disabled="true"],
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] div[data-baseweb="input"][data-disabled="true"] {
-            height: 40px !important;
-            min-height: 40px !important;
-            border: 1.5px solid #d6d8de !important;
-            border-radius: 10px !important;
-            box-shadow: none !important;
-            outline: none !important;
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            opacity: 1 !important;
-        }
-
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input:disabled {
-            color: #20242c !important;
-            -webkit-text-fill-color: #20242c !important;
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            opacity: 1 !important;
-        }
-
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input:-webkit-autofill,
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input:-webkit-autofill:hover,
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input:-webkit-autofill:focus {
-            -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
-            -webkit-text-fill-color: #20242c !important;
-        }
-        </style>
-        <div class="objects-price-input-scope" style="display:none"></div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    apply_screen_bottom_compact_class("objects-screen-compact")
 
     demo_costs = object_demo_costs()
 
@@ -1840,24 +1590,20 @@ def render_objects_screen():
             review_label = "Done" if obj.get("approved") else "Review"
             review_type = "primary" if obj.get("approved") else "secondary"
 
-            st.button(
+            if st.button(
                 review_label,
                 key=f"review_{object_key}",
                 width="stretch",
                 type=review_type,
-                on_click=open_object_detail_from_objects_screen,
-                args=(object_key,),
-            )
+            ):
+                st.session_state.current_object = object_key
+                st.session_state.screen = "object_detail"
+                st.rerun()
 
         st.markdown("<div class='soft-line row-line'></div>", unsafe_allow_html=True)
 
-    project_level_costs = project_level_self_costs()
-
-    delivery_self_cost = project_level_costs["delivery"]
-    installation_self_cost = project_level_costs["installation"]
-
-    delivery_suggested = round(objects_subtotal * DELIVERY_RATE)
-    installation_suggested = round(objects_subtotal * INSTALLATION_RATE)
+    delivery_suggested = round(objects_subtotal * 0.03)
+    installation_suggested = round(objects_subtotal * 0.10)
 
     if "delivery_price_input" not in st.session_state:
         st.session_state.delivery_price_input = format_money(delivery_suggested)
@@ -1865,7 +1611,9 @@ def render_objects_screen():
     if "installation_price_input" not in st.session_state:
         st.session_state.installation_price_input = format_money(installation_suggested)
 
-    d0, d1, d2, d3, d4, d_spacer, d5 = st.columns(object_col_weights)
+    extra_row_weights = [1.58, 1.52, 0.90, 0.82, 1.68, 0.98]
+
+    d0, d1, d2, d3, d4, d5 = st.columns(extra_row_weights)
 
     with d0:
         st.markdown(
@@ -1879,18 +1627,6 @@ def render_objects_screen():
         )
 
     with d1:
-        st.markdown(
-            "<div class='table-value center'>1</div>",
-            unsafe_allow_html=True,
-        )
-
-    with d2:
-        st.markdown(
-            f"<div class='table-value center'>{format_money(delivery_self_cost)}</div>",
-            unsafe_allow_html=True,
-        )
-
-    with d3:
         delivery_raw = st.text_input(
             "delivery",
             key="delivery_price_input",
@@ -1905,18 +1641,18 @@ def render_objects_screen():
             unsafe_allow_html=True,
         )
 
+    with d2:
+        st.markdown("&nbsp;", unsafe_allow_html=True)
+    with d3:
+        st.markdown("&nbsp;", unsafe_allow_html=True)
     with d4:
         st.markdown("&nbsp;", unsafe_allow_html=True)
-
-    with d_spacer:
-        st.markdown("&nbsp;", unsafe_allow_html=True)
-
     with d5:
         st.markdown("&nbsp;", unsafe_allow_html=True)
 
     st.markdown("<div class='soft-line row-line'></div>", unsafe_allow_html=True)
 
-    i0, i1, i2, i3, i4, i_spacer, i5 = st.columns(object_col_weights)
+    i0, i1, i2, i3, i4, i5 = st.columns(extra_row_weights)
 
     with i0:
         st.markdown(
@@ -1930,18 +1666,6 @@ def render_objects_screen():
         )
 
     with i1:
-        st.markdown(
-            "<div class='table-value center'>1</div>",
-            unsafe_allow_html=True,
-        )
-
-    with i2:
-        st.markdown(
-            f"<div class='table-value center'>{format_money(installation_self_cost)}</div>",
-            unsafe_allow_html=True,
-        )
-
-    with i3:
         installation_raw = st.text_input(
             "installation",
             key="installation_price_input",
@@ -1956,17 +1680,14 @@ def render_objects_screen():
             unsafe_allow_html=True,
         )
 
+    with i2:
+        st.markdown("&nbsp;", unsafe_allow_html=True)
+    with i3:
+        st.markdown("&nbsp;", unsafe_allow_html=True)
     with i4:
         st.markdown("&nbsp;", unsafe_allow_html=True)
-
-    with i_spacer:
-        st.markdown("&nbsp;", unsafe_allow_html=True)
-
     with i5:
         st.markdown("&nbsp;", unsafe_allow_html=True)
-
-    st.session_state.delivery_self_cost = delivery_self_cost
-    st.session_state.installation_self_cost = installation_self_cost
 
     st.markdown("<div class='soft-line summary-top-line'></div>", unsafe_allow_html=True)
 
@@ -1980,65 +1701,12 @@ def render_objects_screen():
     st.session_state.delivery_price = delivery_price
     st.session_state.installation_price = installation_price
 
-    all_objects_reviewed = all(
-        obj.get("approved") for obj in st.session_state.objects.values()
-    )
-
-    if all_objects_reviewed:
-        st.session_state.review_required_error = False
-
-    summary_pdf_path = Path("assets/RA-N01_summary.pdf")
-
-    s0, s_gap1, s1, s_gap2, s2, s_gap3, s3 = st.columns(
-        [1.05, 0.55, 0.95, 0.55, 0.95, 0.55, 1.10]
-    )
+    s0, s1, s_spacer, s2 = st.columns([1.28, 1.05, 1.38, 0.98])
 
     with s0:
-        summary_pdf_path = Path("assets/RA-N01_summary.pdf")
-
-        if all_objects_reviewed and summary_pdf_path.exists():
-            summary_pdf_b64 = base64.b64encode(summary_pdf_path.read_bytes()).decode("utf-8")
-            summary_href = f"data:application/pdf;base64,{summary_pdf_b64}"
-            summary_link_html = (
-                f'<a class="project-summary-download-link" '
-                f'href="{summary_href}" '
-                f'download="RA-N01_summary.pdf">'
-                f'<span class="project-summary-pdf-icon">PDF</span>'
-                f'<span>Download PDF</span>'
-                f'</a>'
-            )
-
-        elif all_objects_reviewed:
-            summary_link_html = '<span class="project-summary-download-missing">PDF missing</span>'
-
-        else:
-            summary_link_html = (
-                '<a class="project-summary-download-link locked" '
-                'href="#review-required-message">'
-                '<span class="project-summary-pdf-icon">PDF</span>'
-                '<span>Download PDF</span>'
-                '</a>'
-            )
-
         st.markdown(
             f"""
             <div class="project-summary-cell project-side-summary">
-                <div class="summary-title">Project Summary</div>
-                <div class="project-summary-download-row">
-                    {summary_link_html}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with s_gap1:
-        st.markdown("&nbsp;", unsafe_allow_html=True)
-
-    with s1:
-        st.markdown(
-            f"""
-            <div class="project-summary-cell project-side-summary center">
                 <div class="summary-title">Project Price</div>
                 <div class="summary-number">{format_money(project_price)}</div>
             </div>
@@ -2046,13 +1714,10 @@ def render_objects_screen():
             unsafe_allow_html=True,
         )
 
-    with s_gap2:
-        st.markdown("&nbsp;", unsafe_allow_html=True)
-
-    with s2:
+    with s1:
         st.markdown(
             f"""
-            <div class="project-summary-cell project-side-summary center">
+            <div class="project-summary-cell project-side-summary">
                 <div class="summary-title">VAT 18%</div>
                 <div class="summary-number">{format_money(vat)}</div>
             </div>
@@ -2060,10 +1725,10 @@ def render_objects_screen():
             unsafe_allow_html=True,
         )
 
-    with s_gap3:
+    with s_spacer:
         st.markdown("&nbsp;", unsafe_allow_html=True)
 
-    with s3:
+    with s2:
         st.markdown(
             f"""
             <div class="project-summary-cell project-total-cell">
@@ -2072,22 +1737,7 @@ def render_objects_screen():
             </div>
             """,
             unsafe_allow_html=True,
-        ) 
-
-    error_visible_class = (
-        " visible"
-        if st.session_state.get("review_required_error") and not all_objects_reviewed
-        else ""
-    )
-
-    st.markdown(
-        f"""
-        <div id="review-required-message" class="review-required-error-wide{error_visible_class}">
-            Review all objects first.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        )
 
     st.markdown("<div class='soft-line summary-bottom-line'></div>", unsafe_allow_html=True)
 
@@ -2100,23 +1750,19 @@ def render_objects_screen():
 
     with b1:
         if st.button("Generate proposal", key="generate_proposal", width="stretch"):
-            if all_objects_reviewed:
-                st.session_state.review_required_error = False
-                st.session_state.screen = "proposal"
-                st.rerun()
-
-            st.session_state.review_required_error = True
+            st.session_state.screen = "proposal"
             st.rerun()
 
 
 # Object detail screen. In the old code, only Kitchen has a real card.
 def render_object_detail_screen():
     ensure_objects_state()
+    init_kitchen_editor_state()
 
     object_key = st.session_state.get("current_object", "kitchen")
     obj = st.session_state.objects.get(object_key, st.session_state.objects["kitchen"])
 
-    if object_key not in OBJECT_DETAIL_CONFIG:
+    if object_key != "kitchen":
         render_screen_header(
             f"Object: {obj['name']}",
             "This object card will be added next.",
@@ -2131,15 +1777,6 @@ def render_object_detail_screen():
             st.rerun()
 
         return
-
-    object_config = OBJECT_DETAIL_CONFIG[object_key]
-    state_prefix = object_config["state_prefix"]
-
-    materials_state_key = f"{state_prefix}_materials_editor_df"
-    labor_state_key = f"{state_prefix}_labor_editor_df"
-    overhead_state_key = f"{state_prefix}_overhead_editor_df"
-
-    init_object_editor_state(object_key)
 
     st.markdown(
         """
@@ -2258,8 +1895,8 @@ def render_object_detail_screen():
         unsafe_allow_html=True,
     )
 
-    kitchen_preview_path = Path(object_config["preview_path"])
-    kitchen_confidence = object_config["confidence"]
+    kitchen_preview_path = Path("assets/kitchen_preview.png")
+    kitchen_confidence = 93
 
     if kitchen_preview_path.exists():
         preview_src = base64.b64encode(kitchen_preview_path.read_bytes()).decode("utf-8")
@@ -2299,7 +1936,7 @@ def render_object_detail_screen():
 
     # Materials / hardware section
 
-    materials_source = add_material_cost_column(st.session_state[materials_state_key])
+    materials_source = add_material_cost_column(st.session_state.kitchen_materials_editor_df)
     materials_cost = round(materials_source["Cost"].sum())
     materials_vat = round(materials_cost * VAT_RATE)
     materials_total = materials_cost + materials_vat
@@ -2324,7 +1961,7 @@ def render_object_detail_screen():
 
     materials_response = render_aggrid_editor(
         materials_grid,
-        key=f"{state_prefix}_materials_aggrid",
+        key="kitchen_materials_aggrid",
         group_col="_display_group",
         auto_group_leaf_field="Item",
         editable_columns=["Item", "Unit", "Unit Cost", "Qty"],
@@ -2335,14 +1972,14 @@ def render_object_detail_screen():
     )
 
     update_aggrid_state_and_rerun(
-        materials_state_key,
+        "kitchen_materials_editor_df",
         materials_response,
         drop_columns=["Cost", "_display_group"],
     )
 
     # Labor cost section
 
-    labor_source = add_labor_cost_column(st.session_state[labor_state_key])
+    labor_source = add_labor_cost_column(st.session_state.kitchen_labor_editor_df)
     labor_hours = labor_source["Hours"].apply(safe_float).sum()
     labor_base = round(labor_source["Cost"].sum())
     employer_load = round(labor_base * EMPLOYER_LOAD_RATE)
@@ -2366,7 +2003,7 @@ def render_object_detail_screen():
 
     labor_response = render_aggrid_editor(
         labor_grid,
-        key=f"{state_prefix}_labor_aggrid",
+        key="kitchen_labor_aggrid",
         group_col="_display_group",
         auto_group_leaf_field="Work",
         editable_columns=["Work", "Role", "Hours", "Rate"],
@@ -2377,14 +2014,14 @@ def render_object_detail_screen():
     )
 
     update_aggrid_state_and_rerun(
-        labor_state_key,
+        "kitchen_labor_editor_df",
         labor_response,
         drop_columns=["Cost", "_display_group"],
     )
 
     # Overhead section
 
-    overhead_source = normalize_overhead_df(st.session_state[overhead_state_key])
+    overhead_source = normalize_overhead_df(st.session_state.kitchen_overhead_editor_df)
     overhead_cost = round(overhead_source["Cost"].sum())
     overhead_vat = vat_from_taxable_rows(overhead_source)
     overhead_total = overhead_cost + overhead_vat
@@ -2409,7 +2046,7 @@ def render_object_detail_screen():
 
     overhead_response = render_aggrid_editor(
         overhead_grid,
-        key=f"{state_prefix}_overhead_aggrid",
+        key="kitchen_overhead_aggrid",
         group_col="_display_group",
         auto_group_leaf_field="Group",
         editable_columns=["Group", "Monthly Cost", "Cost"],
@@ -2420,7 +2057,7 @@ def render_object_detail_screen():
     )
 
     update_aggrid_state_and_rerun(
-        overhead_state_key,
+        "kitchen_overhead_editor_df",
         overhead_response,
         drop_columns=["_display_group"],
     )
@@ -2434,7 +2071,7 @@ def render_object_detail_screen():
     st.markdown(
         f"""
         <div class="object-final-summary">
-            <div class="object-final-title">{object_config["self_cost_title"]}</div>
+            <div class="object-final-title">KITCHEN SELF COST</div>
             <div class="object-final-metrics">
                 <div>
                     <div class="object-final-label">Excl. VAT</div>
@@ -2461,7 +2098,7 @@ def render_object_detail_screen():
     with b0:
         if st.button(
             "Back to objects",
-            key=f"back_to_objects_{object_key}",
+            key="back_to_objects_kitchen",
             width="stretch",
         ):
             st.session_state.screen = "objects"
@@ -2469,32 +2106,32 @@ def render_object_detail_screen():
 
     with b1:
         if st.button(
-            object_config["approve_label"],
-            key=f"approve_{object_key}_estimate",
+            "Approve kitchen estimate",
+            key="approve_kitchen_estimate",
             width="stretch",
         ):
-            st.session_state.objects[object_key]["approved"] = True
-            st.session_state.objects[object_key]["unit_cost"] = self_cost_excl_vat
-            st.session_state.objects[object_key]["suggested_price"] = round(self_cost_excl_vat * 1.30)
-            st.session_state.objects[object_key]["sale_price"] = round(self_cost_excl_vat * 1.30)
+            st.session_state.objects["kitchen"]["approved"] = True
+            st.session_state.objects["kitchen"]["unit_cost"] = self_cost_excl_vat
+            st.session_state.objects["kitchen"]["suggested_price"] = round(self_cost_excl_vat * 1.30)
+            st.session_state.objects["kitchen"]["sale_price"] = round(self_cost_excl_vat * 1.30)
 
-            st.session_state.objects[object_key]["materials_cost"] = materials_cost
-            st.session_state.objects[object_key]["materials_vat"] = materials_vat
-            st.session_state.objects[object_key]["materials_total"] = materials_total
+            st.session_state.objects["kitchen"]["materials_cost"] = materials_cost
+            st.session_state.objects["kitchen"]["materials_vat"] = materials_vat
+            st.session_state.objects["kitchen"]["materials_total"] = materials_total
 
-            st.session_state.objects[object_key]["labor_base"] = labor_base
-            st.session_state.objects[object_key]["employer_load"] = employer_load
-            st.session_state.objects[object_key]["labor_total"] = labor_total
+            st.session_state.objects["kitchen"]["labor_base"] = labor_base
+            st.session_state.objects["kitchen"]["employer_load"] = employer_load
+            st.session_state.objects["kitchen"]["labor_total"] = labor_total
 
-            st.session_state.objects[object_key]["overhead_cost"] = overhead_cost
-            st.session_state.objects[object_key]["overhead_vat"] = overhead_vat
-            st.session_state.objects[object_key]["overhead_total"] = overhead_total
+            st.session_state.objects["kitchen"]["overhead_cost"] = overhead_cost
+            st.session_state.objects["kitchen"]["overhead_vat"] = overhead_vat
+            st.session_state.objects["kitchen"]["overhead_total"] = overhead_total
 
-            st.session_state.objects[object_key]["self_cost_excl_vat"] = self_cost_excl_vat
-            st.session_state.objects[object_key]["self_cost_vat"] = self_cost_vat
-            st.session_state.objects[object_key]["self_cost_total"] = self_cost_total
+            st.session_state.objects["kitchen"]["self_cost_excl_vat"] = self_cost_excl_vat
+            st.session_state.objects["kitchen"]["self_cost_vat"] = self_cost_vat
+            st.session_state.objects["kitchen"]["self_cost_total"] = self_cost_total
 
-            approved_input_key = f"sale_price_input_{object_key}"
+            approved_input_key = "sale_price_input_kitchen"
             approved_source_key = f"{approved_input_key}_unit_cost_source"
 
             st.session_state[approved_input_key] = format_money(round(self_cost_excl_vat * 1.30))
