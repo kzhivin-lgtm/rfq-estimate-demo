@@ -1580,30 +1580,30 @@ def render_processing_screen():
             st.rerun()
 
     with b1:
-    proposal_pdf_path = Path("assets/RA-N01_commercial_proposal.pdf")
+        proposal_pdf_path = Path("assets/RA-N01_commercial_proposal.pdf")
 
-    if all_objects_reviewed and proposal_pdf_path.exists():
-        st.download_button(
-            "Generate proposal",
-            data=proposal_pdf_path.read_bytes(),
-            file_name="RA-N01_commercial_proposal.pdf",
-            mime="application/pdf",
-            key="generate_proposal_download",
-            width="stretch",
-        )
+        if all_objects_reviewed and proposal_pdf_path.exists():
+            st.download_button(
+                "Generate proposal",
+                data=proposal_pdf_path.read_bytes(),
+                file_name="RA-N01_commercial_proposal.pdf",
+                mime="application/pdf",
+                key="generate_proposal_download",
+                width="stretch",
+            )
 
-    elif all_objects_reviewed:
-        st.button(
-            "Proposal PDF missing",
-            key="generate_proposal_missing",
-            width="stretch",
-            disabled=True,
-        )
+        elif all_objects_reviewed:
+            st.button(
+                "Proposal PDF missing",
+                key="generate_proposal_missing",
+                width="stretch",
+                disabled=True,
+            )
 
-    else:
-        if st.button("Generate proposal", key="generate_proposal_locked", width="stretch"):
-            st.session_state.review_required_error = True
-            st.rerun()
+        else:
+            if st.button("Generate proposal", key="generate_proposal_locked", width="stretch"):
+                st.session_state.review_required_error = True
+                st.rerun()
 
 def open_object_detail_from_objects_screen(object_key: str):
     st.session_state.current_object = object_key
