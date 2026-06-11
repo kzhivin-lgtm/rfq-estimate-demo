@@ -11,6 +11,7 @@ from textwrap import dedent
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 try:
     from st_aggrid import (
@@ -270,15 +271,13 @@ def nav_buttons(back_screen: str | None, next_screen: str | None, next_label: st
 
     if back_screen:
         if col1.button("Back", key=f"nav_back_{back_screen}_{next_screen}", width="stretch"):
-            st.session_state.screen = back_screen
-            st.rerun()
+            go_to_screen(back_screen)
     else:
         col1.empty()
 
     if next_screen:
         if col2.button(next_label, key=f"nav_next_{back_screen}_{next_screen}", width="stretch"):
-            st.session_state.screen = next_screen
-            st.rerun()
+            go_to_screen(next_screen)
     else:
         col2.empty()
 
@@ -305,13 +304,65 @@ def render_screen_header(title: str, subtitle: str | None = None):
             unsafe_allow_html=True,
         )
 
-def go_to_screen(screen_name: str):
+def set_screen(screen_name: str):
     st.session_state.screen = screen_name
     st.session_state.scroll_to_top = True
+
+
+def go_to_screen(screen_name: str):
+    set_screen(screen_name)
     st.rerun()
 
-def mark_proposal_generated():
-    st.session_state.proposal_generated = True
+
+def render_scroll_to_top_if_needed():
+    if not st.session_state.pop("scroll_to_top", False):
+        return
+
+    components.html(
+        """
+        <script>
+        (function () {
+            function scrollTopNow() {
+                const doc = window.parent.document;
+                const win = window.parent;
+
+                try { win.scrollTo(0, 0); } catch (e) {}
+                try { doc.documentElement.scrollTop = 0; } catch (e) {}
+                try { doc.body.scrollTop = 0; } catch (e) {}
+
+                const selectors = [
+                    "[data-testid='stAppViewContainer']",
+                    "[data-testid='stVerticalBlock']",
+                    "section.main",
+                    ".main",
+                    ".stApp",
+                    ".block-container"
+                ];
+
+                selectors.forEach(function (selector) {
+                    try {
+                        doc.querySelectorAll(selector).forEach(function (el) {
+                            if (!el) return;
+                            el.scrollTop = 0;
+                            if (el.scrollTo) el.scrollTo(0, 0);
+                        });
+                    } catch (e) {}
+                });
+            }
+
+            scrollTopNow();
+
+            let elapsed = 0;
+            const interval = setInterval(function () {
+                scrollTopNow();
+                elapsed += 50;
+                if (elapsed >= 1200) clearInterval(interval);
+            }, 50);
+        })();
+        </script>
+        """,
+        height=0,
+    )
 
 def safe_float(value, fallback=0):
     if value is None:
@@ -1387,8 +1438,7 @@ def render_upload_screen():
         st.session_state.uploaded_filename = uploaded_file.name
         st.session_state.uploaded_file_size = uploaded_file.size
         st.session_state.uploaded_file_type = detect_file_type(uploaded_file.name)
-        st.session_state.screen = "processing"
-        st.rerun()
+        go_to_screen("processing")
 
 
 # Processing animation before the objects workspace.
@@ -1432,8 +1482,7 @@ def render_estimate_processing_screen():
         progress.progress(i / len(steps))
         time.sleep(0.5)
 
-    st.session_state.screen = "objects"
-    st.rerun()
+    go_to_screen("objects")
 
 def apply_screen_bottom_compact_class(class_name: str):
     st.markdown(
@@ -1583,8 +1632,7 @@ def render_processing_screen():
     with b0:
         if st.button("Back", key="processing_back", width="stretch"):
             st.session_state.metadata_extracted = False
-            st.session_state.screen = "upload"
-            st.rerun()
+            go_to_screen("upload")
 
     with b1:
         if st.button(
@@ -1596,8 +1644,7 @@ def render_processing_screen():
                 if object_key in st.session_state.objects:
                     st.session_state.objects[object_key]["name"] = name
 
-            st.session_state.screen = "estimate_processing"
-            st.rerun()
+            go_to_screen("estimate_processing")
 
 def open_object_detail_from_objects_screen(object_key: str):
     ensure_objects_state()
@@ -1608,9 +1655,9 @@ def open_object_detail_from_objects_screen(object_key: str):
         st.session_state.object_processing_completed = []
 
     if object_key in st.session_state.object_processing_completed:
-        st.session_state.screen = "object_detail"
+        set_screen("object_detail")
     else:
-        st.session_state.screen = "object_processing"
+        set_screen("object_processing")
 
 # Objects summary screen: object rows, project-level costs, and proposal CTA.
 def render_objects_screen():
@@ -2121,41 +2168,16 @@ def render_objects_screen():
 
     with b0:
         if st.button("Back", key="objects_back", width="stretch"):
-            st.session_state.screen = "processing"
-            st.rerun()
+            go_to_screen("processing")
 
     with b1:
-        proposal_pdf_path = Path("assets/RA-N01_commercial_proposal.pdf")
-        proposal_generated = st.session_state.get("proposal_generated", False)
+        if st.button("Generate proposal", key="generate_proposal", width="stretch"):
+            if all_objects_reviewed:
+                st.session_state.review_required_error = False
+                go_to_screen("proposal")
 
-        if all_objects_reviewed and proposal_pdf_path.exists():
-            st.download_button(
-                "Proposal Generated" if proposal_generated else "Generate proposal",
-                data=proposal_pdf_path.read_bytes(),
-                file_name="RA-N01_commercial_proposal.pdf",
-                mime="application/pdf",
-                key=(
-                    "generate_proposal_download_done"
-                    if proposal_generated
-                    else "generate_proposal_download"
-                ),
-                width="stretch",
-                type="primary" if proposal_generated else "secondary",
-                on_click=mark_proposal_generated,
-            )
-
-        elif all_objects_reviewed:
-            st.button(
-                "Proposal PDF missing",
-                key="generate_proposal_missing",
-                width="stretch",
-                disabled=True,
-            )
-
-        else:
-            if st.button("Generate proposal", key="generate_proposal_locked", width="stretch"):
-                st.session_state.review_required_error = True
-                st.rerun()
+            st.session_state.review_required_error = True
+            st.rerun()
 
 def render_object_processing_screen():
     ensure_objects_state()
@@ -2208,8 +2230,7 @@ def render_object_processing_screen():
     if object_key not in st.session_state.object_processing_completed:
             st.session_state.object_processing_completed.append(object_key)
 
-    st.session_state.screen = "object_detail"
-    st.rerun()
+    go_to_screen("object_detail")
 
 # Object detail screen. In the old code, only Kitchen has a real card.
 def render_object_detail_screen():
@@ -2229,8 +2250,7 @@ def render_object_detail_screen():
             key=f"back_to_objects_{object_key}",
             width="stretch",
         ):
-            st.session_state.screen = "objects"
-            st.rerun()
+            go_to_screen("objects")
 
         return
 
@@ -2566,8 +2586,7 @@ def render_object_detail_screen():
             key=f"back_to_objects_{object_key}",
             width="stretch",
         ):
-            st.session_state.screen = "objects"
-            st.rerun()
+            go_to_screen("objects")
 
     with b1:
         if st.button(
@@ -2602,8 +2621,7 @@ def render_object_detail_screen():
             st.session_state[approved_input_key] = format_money(round(self_cost_excl_vat * 1.30))
             st.session_state[approved_source_key] = self_cost_excl_vat
 
-            st.session_state.screen = "objects"
-            st.rerun()
+            go_to_screen("objects")
 
 # Proposal preview screen. This is still a demo markdown preview.
 def render_proposal_screen():
@@ -2723,18 +2741,7 @@ apply_css()
 if "screen" not in st.session_state:
     st.session_state.screen = "upload"
 
-if st.session_state.pop("scroll_to_top", False):
-    st.markdown(
-        """
-        <script>
-        window.scrollTo(0, 0);
-        window.parent.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-        </script>
-        """,
-        unsafe_allow_html=True,
-    )
+render_scroll_to_top_if_needed()
 
 if st.session_state.screen == "upload":
     render_upload_screen()
@@ -2751,5 +2758,4 @@ elif st.session_state.screen == "object_detail":
 elif st.session_state.screen == "proposal":
     render_proposal_screen()
 else:
-    st.session_state.screen = "upload"
-    st.rerun()
+    go_to_screen("upload")

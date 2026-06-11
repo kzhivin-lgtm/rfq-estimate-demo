@@ -1593,8 +1593,17 @@ def render_processing_screen():
             st.rerun()
 
 def open_object_detail_from_objects_screen(object_key: str):
+    ensure_objects_state()
+
     st.session_state.current_object = object_key
-    st.session_state.screen = "object_detail"
+
+    if "object_processing_completed" not in st.session_state:
+        st.session_state.object_processing_completed = []
+
+    if object_key in st.session_state.object_processing_completed:
+        st.session_state.screen = "object_detail"
+    else:
+        st.session_state.screen = "object_processing"
 
 # Objects summary screen: object rows, project-level costs, and proposal CTA.
 def render_objects_screen():
@@ -1644,10 +1653,12 @@ def render_objects_screen():
         }
 
         /* Text field itself */
-        .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input {
+            .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input {
+            box-sizing: border-box !important;
             height: 38px !important;
             min-height: 38px !important;
-            padding: 0 14px !important;
+            max-height: 38px !important;
+            padding: 0 14px 0 14px !important;
 
             border: 0 !important;
             box-shadow: none !important;
@@ -1656,12 +1667,13 @@ def render_objects_screen():
             color: #20242c !important;
             font-size: 18px !important;
             font-weight: 800 !important;
-            line-height: 38px !important;
+            line-height: normal !important;
             text-align: center !important;
 
             opacity: 1 !important;
             -webkit-text-fill-color: #20242c !important;
-        }
+            transform: translateY(0px) !important;
+     }
 
         .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input:focus {
             border: 0 !important;
@@ -1695,11 +1707,18 @@ def render_objects_screen():
         }
 
         .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input:disabled {
+            box-sizing: border-box !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            max-height: 38px !important;
+            padding: 0 14px 0 14px !important;
+            line-height: normal !important;
             color: #20242c !important;
             -webkit-text-fill-color: #20242c !important;
             background: #ffffff !important;
             background-color: #ffffff !important;
             opacity: 1 !important;
+            transform: translateY(0px) !important;
         }
 
         .stApp:has(.objects-price-input-scope) div[data-testid="stTextInput"] input:-webkit-autofill,
@@ -2108,6 +2127,59 @@ def render_objects_screen():
             st.session_state.review_required_error = True
             st.rerun()
 
+def render_object_processing_screen():
+    ensure_objects_state()
+
+    object_key = st.session_state.get("current_object", "kitchen")
+    obj = st.session_state.objects.get(object_key, st.session_state.objects["kitchen"])
+    object_name = obj.get("name", "Object")
+
+    st.markdown(
+        """
+        <style>
+        .stApp:has(.object-processing-active) div[data-testid="stButton"] {
+            display: none !important;
+        }
+
+        .stApp:has(.object-processing-active) .block-container {
+            padding-bottom: 48px !important;
+        }
+        </style>
+        <div class="object-processing-active" style="display:none"></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    render_screen_header(f"Reviewing {object_name}")
+
+    progress = st.progress(0)
+    status_placeholder = st.empty()
+
+    steps = [
+        f"1/6 Reading {object_name} geometry...",
+        "2/6 Matching materials and finishes...",
+        "3/6 Estimating fabrication operations...",
+        "4/6 Calculating labor and machine time...",
+        "5/6 Allocating overhead and reserves...",
+        "6/6 Object estimate ready.",
+    ]
+
+    for i, step in enumerate(steps, start=1):
+        status_placeholder.markdown(
+            f"<div class='status-card'>{step}</div>",
+            unsafe_allow_html=True,
+        )
+        progress.progress(i / len(steps))
+        time.sleep(0.35)
+
+    if "object_processing_completed" not in st.session_state:
+        st.session_state.object_processing_completed = []
+
+    if object_key not in st.session_state.object_processing_completed:
+            st.session_state.object_processing_completed.append(object_key)
+
+    st.session_state.screen = "object_detail"
+    st.rerun()
 
 # Object detail screen. In the old code, only Kitchen has a real card.
 def render_object_detail_screen():
@@ -2629,6 +2701,8 @@ elif st.session_state.screen == "estimate_processing":
     render_estimate_processing_screen()
 elif st.session_state.screen == "objects":
     render_objects_screen()
+elif st.session_state.screen == "object_processing":
+    render_object_processing_screen()
 elif st.session_state.screen == "object_detail":
     render_object_detail_screen()
 elif st.session_state.screen == "proposal":

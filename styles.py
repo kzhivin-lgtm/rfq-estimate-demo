@@ -10,18 +10,31 @@ def apply_css():
             --text-main: #20222a;
             --text-muted: #737373;
             --line-soft: #eeeeee;
+
             --upload-bg: #efefef;
             --upload-hover: #e7e7e7;
+
             --orange: #f47c48;
-            --green-bg: #eaf7ee;
-            --green-border: #cfead7;
-            --green-text: #255c35;
+            --blue-focus: #2f80ed;
+            --error: #d94c4c;
+
+            --button-bg: #f2f2f2;
+            --button-border: #f2f2f2;
+            --button-text: #111111;
+
+            --success-soft-bg: #eaf7ee;
+            --success-soft-hover: #dff2e5;
+            --success-soft-border: #cfead7;
+            --success-soft-hover-border: #bfe2ca;
+            --success-soft-text: #255c35;
+
+            --success-strong-bg: #2f9e44;
+            --success-strong-hover: #26883a;
+            --success-strong-text: #ffffff;
+
             --card-bg: #ffffff;
             --card-border: #e8e8e8;
             --soft-bg: #f7f7f7;
-            --blue-focus: #2f80ed;
-            --error: #d94c4c;
-            --ok: #2f9e44;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -30,12 +43,24 @@ def apply_css():
                 --text-main: #f2f2f2;
                 --text-muted: #b8b8b8;
                 --line-soft: #343842;
+
                 --upload-bg: #1c202a;
                 --upload-hover: #252a36;
-                --orange: #f47c48;
-                --green-bg: #10291a;
-                --green-border: #245738;
-                --green-text: #b8f3c9;
+
+                --button-bg: #f2f2f2;
+                --button-border: #f2f2f2;
+                --button-text: #111111;
+
+                --success-soft-bg: #10291a;
+                --success-soft-hover: #163520;
+                --success-soft-border: #245738;
+                --success-soft-hover-border: #2d6a45;
+                --success-soft-text: #b8f3c9;
+
+                --success-strong-bg: #2f9e44;
+                --success-strong-hover: #26883a;
+                --success-strong-text: #ffffff;
+
                 --card-bg: #121722;
                 --card-border: #303746;
                 --soft-bg: #161a23;
@@ -197,9 +222,9 @@ def apply_css():
         .status-card {
             border-radius: 14px;
             padding: 13px 18px;
-            background: var(--green-bg);
-            border: 1px solid var(--green-border);
-            color: var(--green-text);
+            background: var(--success-soft-bg);
+            border: 1px solid var(--success-soft-border);
+            color: var(--success-soft-text);
             font-size: 15px;
             margin-top: 16px;
             margin-bottom: 28px;
@@ -252,42 +277,88 @@ def apply_css():
         }
 
         /* -----------------------------
+           progress
+        ----------------------------- */
+
+        div[data-testid="stProgress"] div[role="progressbar"] {
+            background-color: var(--blue-focus) !important;
+        }
+
+        div[data-testid="stProgress"] div[role="progressbar"] > div {
+            background-color: var(--orange) !important;
+        }
+
+        .stProgress > div > div > div {
+            background-color: var(--blue-focus) !important;
+        }
+
+        .stProgress > div > div > div > div {
+            background-color: var(--orange) !important;
+        }
+
+        div[data-testid="stProgress"] * {
+            border-color: var(--orange) !important;
+        }
+
+        div[data-testid="stProgress"] div[style*="background-color"] {
+            background-color: var(--orange) !important;
+        }
+
+        /* -----------------------------
            buttons
         ----------------------------- */
 
-        div[data-testid="stButton"] {
+        div[data-testid="stButton"],
+        div[data-testid="stDownloadButton"] {
+            width: 100% !important;
             margin-top: 8px !important;
         }
 
-        div[data-testid="stButton"] button {
+        div[data-testid="stButton"] button,
+        div[data-testid="stDownloadButton"] button {
+            width: 100% !important;
             height: 68px !important;
+            min-height: 68px !important;
+            max-height: 68px !important;
+            padding: 0 !important;
             border-radius: 16px !important;
+            border: 1px solid var(--button-border) !important;
+            background: var(--button-bg) !important;
+            color: var(--button-text) !important;
+            box-sizing: border-box !important;
+            box-shadow: none !important;
             font-size: 22px !important;
             font-weight: 900 !important;
-            border: 1px solid #f2f2f2 !important;
-            background: #f2f2f2 !important;
-            color: #111111 !important;
+            line-height: 68px !important;
         }
 
-        div[data-testid="stButton"] button p {
+        div[data-testid="stButton"] button p,
+        div[data-testid="stDownloadButton"] button p {
+            margin: 0 !important;
+            padding: 0 !important;
+            color: var(--button-text) !important;
             font-size: 22px !important;
             font-weight: 900 !important;
-            color: #111111 !important;
+            line-height: 68px !important;
             white-space: nowrap !important;
         }
 
-        div[data-testid="stButton"] button:hover {
+        div[data-testid="stButton"] button:hover,
+        div[data-testid="stDownloadButton"] button:hover {
             border-color: var(--orange) !important;
             background: #ffffff !important;
             color: var(--orange) !important;
         }
 
-        div[data-testid="stButton"] button:hover p {
+        div[data-testid="stButton"] button:hover p,
+        div[data-testid="stDownloadButton"] button:hover p {
             color: var(--orange) !important;
         }
 
         div[data-testid="stButton"] button:disabled,
-        div[data-testid="stButton"] button[disabled] {
+        div[data-testid="stButton"] button[disabled],
+        div[data-testid="stDownloadButton"] button:disabled,
+        div[data-testid="stDownloadButton"] button[disabled] {
             opacity: 0.45 !important;
             background: #d8d8d8 !important;
             color: #111111 !important;
@@ -295,53 +366,82 @@ def apply_css():
         }
 
         div[data-testid="stButton"] button:disabled p,
-        div[data-testid="stButton"] button[disabled] p {
+        div[data-testid="stButton"] button[disabled] p,
+        div[data-testid="stDownloadButton"] button:disabled p,
+        div[data-testid="stDownloadButton"] button[disabled] p {
             color: #111111 !important;
         }
 
+        /* Regular primary buttons: object Done state. */
         div[data-testid="stButton"] button[kind="primary"] {
-            background: #2f9e44 !important;
-            border-color: #2f9e44 !important;
-            color: #ffffff !important;
+            background: var(--success-soft-bg) !important;
+            border-color: var(--success-soft-border) !important;
+            color: var(--success-soft-text) !important;
         }
 
         div[data-testid="stButton"] button[kind="primary"] p {
-            color: #ffffff !important;
+            color: var(--success-soft-text) !important;
         }
 
         div[data-testid="stButton"] button[kind="primary"]:hover {
-            background: #26883a !important;
-            border-color: #26883a !important;
-            color: #ffffff !important;
+            background: var(--success-soft-hover) !important;
+            border-color: var(--success-soft-hover-border) !important;
+            color: var(--success-soft-text) !important;
         }
 
         div[data-testid="stButton"] button[kind="primary"]:hover p {
-            color: #ffffff !important;
+            color: var(--success-soft-text) !important;
+        }
+
+        /* Download primary button: final proposal generated state. */
+        div[data-testid="stDownloadButton"] button[kind="primary"] {
+            background: var(--success-strong-bg) !important;
+            border-color: var(--success-strong-bg) !important;
+            color: var(--success-strong-text) !important;
+        }
+
+        div[data-testid="stDownloadButton"] button[kind="primary"] p {
+            color: var(--success-strong-text) !important;
+        }
+
+        div[data-testid="stDownloadButton"] button[kind="primary"]:hover {
+            background: var(--success-strong-hover) !important;
+            border-color: var(--success-strong-hover) !important;
+            color: var(--success-strong-text) !important;
+        }
+
+        div[data-testid="stDownloadButton"] button[kind="primary"]:hover p {
+            color: var(--success-strong-text) !important;
         }
 
         button[kind="tertiary"] {
+            width: auto !important;
             height: 24px !important;
             min-height: 24px !important;
+            max-height: 24px !important;
             padding: 0 !important;
             margin: 0 !important;
             border: none !important;
             background: transparent !important;
             border-radius: 0 !important;
-            color: var(--text-muted) !important;
             box-shadow: none !important;
+            color: var(--text-muted) !important;
         }
 
         button[kind="tertiary"] p {
+            margin: 0 !important;
+            padding: 0 !important;
+            color: var(--text-muted) !important;
             font-size: 11px !important;
             font-weight: 700 !important;
-            color: var(--text-muted) !important;
+            line-height: 24px !important;
             white-space: nowrap !important;
         }
 
         button[kind="tertiary"]:hover {
             background: transparent !important;
-            color: var(--orange) !important;
             border: none !important;
+            color: var(--orange) !important;
         }
 
         button[kind="tertiary"]:hover p {
@@ -362,17 +462,31 @@ def apply_css():
             margin-bottom: 0 !important;
         }
 
+        div[data-baseweb="input"],
         div[data-baseweb="base-input"] {
             width: 100% !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
         }
 
-        div[data-testid="stTextInput"] input {
+        div[data-baseweb="input"]:hover,
+        div[data-baseweb="input"]:focus-within,
+        div[data-baseweb="base-input"]:hover,
+        div[data-baseweb="base-input"]:focus-within {
+            background: #ffffff !important;
+            box-shadow: none !important;
+        }
+
+        div[data-testid="stTextInput"] input,
+        div[data-testid="stTextInput"] input:hover,
+        div[data-testid="stTextInput"] input:focus,
+        div[data-testid="stTextInput"] input:active {
             height: 46px !important;
             min-height: 46px !important;
             line-height: 46px !important;
             border-radius: 8px !important;
-            border: 0 !important;
-            background: rgba(128, 128, 128, 0.10) !important;
+            border: 1px solid transparent !important;
+            background: #ffffff !important;
             text-align: center !important;
             font-size: 18px !important;
             font-weight: 900 !important;
@@ -380,21 +494,12 @@ def apply_css():
             box-shadow: none !important;
             padding: 0 10px 2px 10px !important;
             overflow: visible !important;
-        }
-
-        div[data-testid="stTextInput"] input:focus {
-            border: 1px solid var(--blue-focus) !important;
-            box-shadow: 0 0 0 1px var(--blue-focus) !important;
             outline: none !important;
         }
 
-        div[data-baseweb="input"]:focus-within {
+        div[data-testid="stTextInput"] input:focus {
             border-color: var(--blue-focus) !important;
             box-shadow: 0 0 0 1px var(--blue-focus) !important;
-        }
-
-        input {
-            color: #111111 !important;
         }
 
         div[data-testid="InputInstructions"],
@@ -1079,43 +1184,23 @@ def apply_css():
                 margin-bottom: 22px;
             }
 
-            /* Progress bar */
-
-            div[data-testid="stProgress"] div[role="progressbar"] {
-                background-color: var(--blue-focus) !important;
-            }
-
-            div[data-testid="stProgress"] div[role="progressbar"] > div {
-                background-color: var(--orange) !important;
-            }
-
-            .stProgress > div > div > div {
-                background-color: var(--blue-focus) !important;
-            }
-
-            .stProgress > div > div > div > div {
-                background-color: var(--orange) !important;
-            }
-
-            div[data-testid="stProgress"] * {
-                border-color: var(--orange) !important;
-            }
-
-            div[data-testid="stProgress"] div[style*="background-color"] {
-                background-color: var(--orange) !important;
-            }
-
             .section-title {
                 margin-top: 18px;
                 margin-bottom: 14px;
             }
 
-            div[data-testid="stButton"] button {
+            div[data-testid="stButton"] button,
+            div[data-testid="stDownloadButton"] button {
                 height: 58px !important;
+                min-height: 58px !important;
+                max-height: 58px !important;
+                line-height: 58px !important;
             }
 
-            div[data-testid="stButton"] button p {
+            div[data-testid="stButton"] button p,
+            div[data-testid="stDownloadButton"] button p {
                 font-size: 19px !important;
+                line-height: 58px !important;
             }
         }
 
@@ -1189,13 +1274,19 @@ def apply_css():
                 font-size: 14px;
             }
 
-            div[data-testid="stButton"] button {
+            div[data-testid="stButton"] button,
+            div[data-testid="stDownloadButton"] button {
                 height: 58px !important;
+                min-height: 58px !important;
+                max-height: 58px !important;
+                line-height: 58px !important;
             }
 
-            div[data-testid="stButton"] button p {
+            div[data-testid="stButton"] button p,
+            div[data-testid="stDownloadButton"] button p {
                 font-size: 16px !important;
                 font-weight: 900 !important;
+                line-height: 58px !important;
             }
         }
         </style>
