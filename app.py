@@ -1580,16 +1580,29 @@ def render_processing_screen():
             st.rerun()
 
     with b1:
-        if st.button(
-            "Confirm object detection → Estimate",
-            key="confirm_objects_continue",
-            width="stretch",
-        ):
-            for object_key, name in st.session_state.detected_object_names.items():
-                if object_key in st.session_state.objects:
-                    st.session_state.objects[object_key]["name"] = name
+    proposal_pdf_path = Path("assets/RA-N01_commercial_proposal.pdf")
 
-            st.session_state.screen = "estimate_processing"
+    if all_objects_reviewed and proposal_pdf_path.exists():
+        st.download_button(
+            "Generate proposal",
+            data=proposal_pdf_path.read_bytes(),
+            file_name="RA-N01_commercial_proposal.pdf",
+            mime="application/pdf",
+            key="generate_proposal_download",
+            width="stretch",
+        )
+
+    elif all_objects_reviewed:
+        st.button(
+            "Proposal PDF missing",
+            key="generate_proposal_missing",
+            width="stretch",
+            disabled=True,
+        )
+
+    else:
+        if st.button("Generate proposal", key="generate_proposal_locked", width="stretch"):
+            st.session_state.review_required_error = True
             st.rerun()
 
 def open_object_detail_from_objects_screen(object_key: str):
