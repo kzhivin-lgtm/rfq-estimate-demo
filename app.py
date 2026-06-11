@@ -1814,9 +1814,7 @@ def render_objects_screen():
         """
         <div class="screen-block objects-title-block">
             <div class="orange-title">
-                <div>Review each object →</div>
-                <div>Set sale price per unit →</div>
-                <div>Generate proposal</div>
+                <Set>Review objects → Set sale price → Generate proposal</div>
             </div>
         </div>
         """,
