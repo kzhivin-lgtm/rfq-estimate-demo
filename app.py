@@ -1844,18 +1844,55 @@ def render_processing_screen():
 
         rfq_source_path = Path("assets/RA-N01_20260216.pdf")
 
+        st.markdown(
+            """
+            <style>
+            div[class*="st-key-rfq_source_file_download"] button {
+                display: block !important;
+                width: auto !important;
+                min-height: 0 !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                color: inherit !important;
+                text-align: left !important;
+                justify-content: flex-start !important;
+            }
+
+            div[class*="st-key-rfq_source_file_download"] button:hover,
+            div[class*="st-key-rfq_source_file_download"] button:active,
+            div[class*="st-key-rfq_source_file_download"] button:focus {
+                border: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                color: inherit !important;
+            }
+
+            div[class*="st-key-rfq_source_file_download"] button div[data-testid="stMarkdownContainer"],
+            div[class*="st-key-rfq_source_file_download"] button p {
+                margin: 0 !important;
+                padding: 0 !important;
+                font: inherit !important;
+                color: inherit !important;
+                text-align: left !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
         if rfq_source_path.exists():
-            rfq_source_b64 = base64.b64encode(rfq_source_path.read_bytes()).decode("utf-8")
-            st.markdown(
-                f"""
-                <a
-                    class='preview-filename'
-                    href='data:application/pdf;base64,{rfq_source_b64}'
-                    download='RA-N01_20260216.pdf'
-                    style='display:block; color:inherit; text-decoration:none;'
-                >RA-N01_20260216.pdf</a>
-                """,
-                unsafe_allow_html=True,
+            st.download_button(
+                "RA-N01_20260216.pdf",
+                data=rfq_source_path.read_bytes(),
+                file_name="RA-N01_20260216.pdf",
+                mime="application/pdf",
+                key="rfq_source_file_download",
+                width="content",
             )
         else:
             st.markdown(
