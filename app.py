@@ -1550,7 +1550,7 @@ def render_processing_screen():
 
     st.markdown(
         "<div class='screen-block processing-title-block'>"
-        "<h1 class='screen-title'>File review</h1>"
+        "<h1 class='screen-title file-review-title'>File review</h1>"
         "</div>",
         unsafe_allow_html=True,
     )

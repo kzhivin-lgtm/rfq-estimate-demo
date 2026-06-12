@@ -288,12 +288,19 @@ def apply_css():
         }
 
         .screen-title {
+            color: var(--ink-900) !important;
+            font-size: 28px !important;
+            line-height: 1.15 !important;
+            font-weight: 500 !important;
+            letter-spacing: -0.01em !important;
+            margin: 0 0 var(--s5) 0 !important;
+        }
+
+        .file-review-title {
             color: var(--accent-500) !important;
             font-size: 40px !important;
             line-height: 1.1 !important;
-            font-weight: 500 !important;
             letter-spacing: -0.02em !important;
-            margin: 0 0 var(--s5) 0 !important;
         }
 
         .screen-subtitle {
