@@ -2632,7 +2632,7 @@ def render_object_detail_screen():
             column-gap: 52px !important;
             align-items: start !important;
             padding-top: 28px !important;
-            margin-bottom: -10px !important;
+            margin-bottom: -22px !important;
         }
 
         .object-detail-title-block {
@@ -2644,7 +2644,7 @@ def render_object_detail_screen():
             display: flex !important;
             align-items: baseline !important;
             gap: 10px !important;
-            margin: 0 0 9px 0 !important;
+            margin: 0 0 14px 0 !important;
             font-family: var(--mono) !important;
             font-size: 40px !important;
             line-height: 1.05 !important;
@@ -2652,6 +2652,7 @@ def render_object_detail_screen():
             white-space: nowrap !important;
             color: var(--ink-900) !important;
             font-weight: 700 !important;
+            margin-bottom: 18px !important;
         }
 
         .object-detail-main-value {
@@ -2711,6 +2712,10 @@ def render_object_detail_screen():
             height: 120px !important;
             object-fit: cover !important;
             border-radius: 10px !important;
+        }
+
+        .object-detail-hero-spacer {
+            height: 0 !important;
         }
 
         .object-detail-preview-placeholder {
