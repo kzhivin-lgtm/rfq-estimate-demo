@@ -5,12 +5,14 @@
 # and hardcoded demo values are intentionally preserved.
 
 import base64
+import re
 import time
 from pathlib import Path
 from textwrap import dedent
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 try:
     from st_aggrid import (
@@ -203,6 +205,29 @@ def project_level_self_costs():
     }
 
 
+def locked_demo_values():
+    return {
+        "objects": {
+            "kitchen": {
+                "unit_cost": 29925,
+                "suggested_price": 38902,
+            },
+            "kitchen_island": {
+                "unit_cost": 33363,
+                "suggested_price": 43372,
+            },
+            "wall_shelf": {
+                "unit_cost": 19904,
+                "suggested_price": 25875,
+            },
+        },
+        "project_level_prices": {
+            "delivery": 3244,
+            "installation": 10815,
+        },
+    }
+
+
 def object_demo_costs():
     def estimate_initial_self_cost_excl_vat(object_key: str) -> int:
         config = OBJECT_DETAIL_CONFIG.get(object_key)
@@ -288,9 +313,9 @@ def render_screen_header(title: str, subtitle: str | None = None):
 
     st.markdown(
         f"""
-        <div class="screen-title">
+        <h1 class="app-h1">
             {title}
-        </div>
+        </h1>
         """,
         unsafe_allow_html=True,
     )
@@ -312,6 +337,56 @@ def go_to_screen(screen_name: str):
 
 def mark_proposal_generated():
     st.session_state.proposal_generated = True
+
+
+def request_scroll_to_top():
+    st.session_state.scroll_to_top = True
+
+
+def run_scroll_to_top_if_requested():
+    if not st.session_state.get("scroll_to_top"):
+        return
+
+    st.session_state.scroll_to_top = False
+
+    components.html(
+        """
+        <script>
+        function scrollToTopNow() {
+            const doc = window.parent.document;
+
+            const targets = [
+                doc.scrollingElement,
+                doc.documentElement,
+                doc.body,
+                doc.querySelector('[data-testid="stAppViewContainer"]'),
+                doc.querySelector('section.main'),
+                doc.querySelector('.stMain'),
+                doc.querySelector('.main'),
+                doc.querySelector('.block-container')?.parentElement
+            ];
+
+            targets.forEach((el) => {
+                if (!el) return;
+
+                if (typeof el.scrollTo === 'function') {
+                    el.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                }
+
+                el.scrollTop = 0;
+                el.scrollLeft = 0;
+            });
+
+            window.parent.scrollTo(0, 0);
+        }
+
+        [0, 50, 150, 300, 600].forEach((delay) => {
+            window.setTimeout(scrollToTopNow, delay);
+        });
+        </script>
+        """,
+        height=0,
+    )
 
 def safe_float(value, fallback=0):
     if value is None:
@@ -565,11 +640,66 @@ def add_labor_cost_column(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def normalize_overhead_df(df: pd.DataFrame) -> pd.DataFrame:
+def parse_allocation_hours(allocation: str) -> tuple[float, float] | None:
+    match = re.search(r"([0-9.]+)h\s*/\s*([0-9.]+)h", str(allocation))
+
+    if not match:
+        return None
+
+    object_hours = safe_float(match.group(1), 0)
+    capacity_hours = safe_float(match.group(2), 0)
+
+    if capacity_hours <= 0:
+        return None
+
+    return object_hours, capacity_hours
+
+
+def parse_allocation_percent(allocation: str) -> float | None:
+    match = re.search(r"([0-9.]+)\s*%", str(allocation))
+
+    if not match:
+        return None
+
+    return safe_float(match.group(1), 0)
+
+
+def normalize_overhead_df(df: pd.DataFrame, percentage_base_cost: float = 0) -> pd.DataFrame:
     result = df.copy()
 
     result["Monthly Cost"] = result["Monthly Cost"].apply(safe_float)
-    result["Cost"] = result["Cost"].apply(safe_float).round().astype(int)
+    result["Cost"] = result["Cost"].apply(safe_float)
+
+    percent_mask = result["Allocation"].astype(str).str.contains("%", regex=False, na=False)
+
+    for index, row in result.iterrows():
+        percent_from_allocation = parse_allocation_percent(row.get("Allocation", ""))
+
+        if percent_from_allocation is not None and safe_float(row.get("Monthly Cost"), 0) == 0:
+            result.at[index, "Monthly Cost"] = percent_from_allocation
+
+    base_cost = safe_float(percentage_base_cost, 0)
+
+    for index, row in result[~percent_mask].iterrows():
+        monthly_cost = safe_float(row.get("Monthly Cost"), 0)
+        allocation_hours = parse_allocation_hours(row.get("Allocation", ""))
+
+        if allocation_hours:
+            object_hours, capacity_hours = allocation_hours
+            cost = round(monthly_cost / capacity_hours * object_hours)
+            result.at[index, "Cost"] = cost
+        else:
+            cost = round(safe_float(row.get("Cost"), 0))
+            result.at[index, "Cost"] = cost
+
+        base_cost += cost
+
+    for index, row in result[percent_mask].iterrows():
+        percent_value = safe_float(row.get("Monthly Cost"), 0)
+        result.at[index, "Cost"] = round(base_cost * percent_value / 100)
+
+    result["Monthly Cost"] = result["Monthly Cost"].round(2)
+    result["Cost"] = result["Cost"].round().astype(int)
 
     return result
 
@@ -798,6 +928,7 @@ def render_aggrid_editor(
     hidden_columns: list[str] | None = None,
     visible_group_count: int | None = None,
     cost_formula: str | None = None,
+    percentage_base_cost: float = 0,
 ):
     require_aggrid()
 
@@ -992,24 +1123,51 @@ def render_aggrid_editor(
             aggFunc="sum",
             editable=False,
             valueGetter=JsCode(
-                """
-                function(params) {
-                    if (params.node.group) {
+                f"""
+                function(params) {{
+                    if (params.node.group) {{
                         return params.node.aggData && params.node.aggData.Cost;
-                    }
+                    }}
 
-                    const monthlyCost = Number(params.data["Monthly Cost"]) || 0;
+                    const parseNumber = (value) => {{
+                        if (value === null || value === undefined || value === '') return 0;
+                        return Number(String(value).replace(/[₪,\u00A0\u202F\s]/g, '').trim()) || 0;
+                    }};
+
+                    const rowCost = (data) => {{
+                        const monthlyCost = parseNumber(data["Monthly Cost"]);
+                        const allocation = String(data["Allocation"] || "");
+                        const hoursMatch = allocation.match(/([0-9.]+)h\s*\/\s*([0-9.]+)h/);
+
+                        if (monthlyCost && hoursMatch) {{
+                            const objectHours = Number(hoursMatch[1]) || 0;
+                            const capacityHours = Number(hoursMatch[2]) || 1;
+                            return Math.round(monthlyCost / capacityHours * objectHours);
+                        }}
+
+                        return parseNumber(data["Cost"]);
+                    }};
+
                     const allocation = String(params.data["Allocation"] || "");
-                    const match = allocation.match(/([0-9.]+)h\\s*\\/\\s*([0-9.]+)h/);
 
-                    if (monthlyCost && match) {
-                        const objectHours = Number(match[1]) || 0;
-                        const capacityHours = Number(match[2]) || 1;
-                        return Math.round(monthlyCost / capacityHours * objectHours);
-                    }
+                    if (allocation.includes("%")) {{
+                        const percent = parseNumber(params.data["Monthly Cost"]);
+                        let baseCost = {safe_float(percentage_base_cost, 0)};
 
-                    return Number(params.data["Cost"]) || 0;
-                }
+                        params.api.forEachNode((node) => {{
+                            if (!node.data) return;
+
+                            const nodeAllocation = String(node.data["Allocation"] || "");
+                            if (nodeAllocation.includes("%")) return;
+
+                            baseCost += rowCost(node.data);
+                        }});
+
+                        return Math.round(baseCost * percent / 100);
+                    }}
+
+                    return rowCost(params.data);
+                }}
                 """
             ),
             cellRenderer=hide_group_total_when_open,
@@ -1073,14 +1231,7 @@ def render_aggrid_editor(
             const allocation = String(data["Allocation"] || "");
             const groupKey = params.node && params.node.group ? String(params.node.key || "") : "";
 
-            if (
-                field === "Monthly Cost" &&
-                (
-                    overheadGroup === "Project reserves" ||
-                    groupKey === "Project reserves" ||
-                    allocation.includes("%")
-                )
-            ) {
+            if (field === "Monthly Cost" && params.node && params.node.group && groupKey === "Project reserves") {
                 return "—";
             }
 
@@ -1088,7 +1239,7 @@ def render_aggrid_editor(
                 return "";
             }
 
-            const value = Number(String(raw).replace(/[₪,\u00A0\u202F\\s]/g, "").trim());
+            const value = Number(String(raw).replace(/[₪,\u00A0\u202F\s]/g, "").trim());
 
             if (!isFinite(value)) {
                 return raw;
@@ -1098,10 +1249,14 @@ def render_aggrid_editor(
             const isInteger = Math.abs(rounded % 1) < 0.0001;
             const text = isInteger
                 ? String(Math.round(rounded))
-                : rounded.toFixed(1).replace(/\\.0$/, "");
+                : rounded.toFixed(1).replace(/\.0$/, "");
+
+            if (field === "Monthly Cost" && allocation.includes("%")) {
+                return text;
+            }
 
             const parts = text.split(".");
-            const intPart = parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, "\\u202F");
+            const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, "\u202F");
 
             return "₪" + intPart + (parts.length > 1 ? "." + parts[1] : "");
         }
@@ -1172,7 +1327,7 @@ def render_aggrid_editor(
         },
         ".ag-root-wrapper": {
             "border-radius": "var(--r-md) !important",
-            "border": "1px solid var(--line-200) !important",
+            "border": "1px solid rgba(23, 25, 28, 0.42) !important",
             "box-shadow": "none !important",
             "background": "var(--surface) !important",
         },
@@ -1202,12 +1357,13 @@ def render_aggrid_editor(
         },
         ".ag-header": {
             "background": "var(--bg) !important",
-            "border-color": "var(--line-200) !important",
+            "border-color": "rgba(23, 25, 28, 0.28) !important",
         },
         ".ag-header-cell": {
             "background": "var(--bg) !important",
             "color": "var(--ink-500) !important",
-            "border-color": "var(--line-200) !important",
+            "border": "0 !important",
+            "border-right": "1px solid rgba(23, 25, 28, 0.32) !important",
         },
         ".ag-header-cell-text": {
             "font-family": "var(--mono) !important",
@@ -1220,14 +1376,16 @@ def render_aggrid_editor(
         ".ag-row": {
             "background": "var(--surface) !important",
             "color": "var(--ink-900) !important",
-            "border-color": "var(--line-200) !important",
+            "border": "0 !important",
+            "border-bottom": "1px solid rgba(23, 25, 28, 0.32) !important",
         },
         ".ag-cell": {
             "display": "flex !important",
             "align-items": "center !important",
             "background": "var(--surface) !important",
             "color": "var(--ink-900) !important",
-            "border-color": "var(--line-200) !important",
+            "border": "0 !important",
+            "border-right": "1px solid rgba(23, 25, 28, 0.32) !important",
         },
         ".ag-text-cell": {
             "justify-content": "flex-start !important",
@@ -1293,7 +1451,7 @@ def render_aggrid_editor(
         },
         ".ag-root-wrapper": {
             "border-radius": "var(--r-md) !important",
-            "border": "1px solid var(--line-200) !important",
+            "border": "1px solid rgba(23, 25, 28, 0.42) !important",
             "box-shadow": "none !important",
             "background": "var(--surface) !important",
         },
@@ -1323,12 +1481,13 @@ def render_aggrid_editor(
         },
         ".ag-header": {
             "background": "var(--bg) !important",
-            "border-color": "var(--line-200) !important",
+            "border-color": "rgba(23, 25, 28, 0.28) !important",
         },
         ".ag-header-cell": {
             "background": "var(--bg) !important",
             "color": "var(--ink-500) !important",
-            "border-color": "var(--line-200) !important",
+            "border": "0 !important",
+            "border-right": "1px solid rgba(23, 25, 28, 0.32) !important",
         },
         ".ag-header-cell-text": {
             "font-family": "var(--mono) !important",
@@ -1341,14 +1500,16 @@ def render_aggrid_editor(
         ".ag-row": {
             "background": "var(--surface) !important",
             "color": "var(--ink-900) !important",
-            "border-color": "var(--line-200) !important",
+            "border": "0 !important",
+            "border-bottom": "1px solid rgba(23, 25, 28, 0.32) !important",
         },
         ".ag-cell": {
             "display": "flex !important",
             "align-items": "center !important",
             "background": "var(--surface) !important",
             "color": "var(--ink-900) !important",
-            "border-color": "var(--line-200) !important",
+            "border": "0 !important",
+            "border-right": "1px solid rgba(23, 25, 28, 0.32) !important",
         },
         ".ag-text-cell": {
             "justify-content": "flex-start !important",
@@ -1391,7 +1552,24 @@ def render_upload_screen():
     st.markdown(
         """
         <style>
-        html, body {
+
+        .stApp:has(.upload-screen-active) .block-container {
+            height: 100vh !important;
+            max-height: 100vh !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+        }
+
+       .stApp:has(.upload-screen-active) .block-container > div {
+            height: 100vh !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            transform: translateY(-40px) !important;
+        }
+
+         html, body {
             height: 100% !important;
             overflow: hidden !important;
         }
@@ -1430,10 +1608,15 @@ def render_upload_screen():
             flex: 0 0 auto !important;
         }
         </style>
+
+        <div class="upload-screen-active" style="display:none"></div>
+
+
         """,
         unsafe_allow_html=True,
     )
-
+    
+    
     st.markdown(
         """
         <div class="landing-title">
@@ -1444,7 +1627,7 @@ def render_upload_screen():
     )
 
     uploaded_file = st.file_uploader(
-        "Drop or upload",
+        "📎 DROP OR UPLOAD",
         type=["pdf", "xlsx", "xls", "csv", "png", "jpg", "jpeg", "dwg", "dxf"],
         label_visibility="collapsed",
     )
@@ -1549,9 +1732,23 @@ def render_processing_screen():
         st.rerun()
 
     st.markdown(
-        "<div class='screen-block processing-title-block'>"
-        "<h1 class='screen-title'>File review</h1>"
-        "</div>",
+        """
+        <div class="screen-wrap">
+            <div class="screen-block processing-title-block">
+                <h1 style="
+                    font-family: var(--mono) !important;
+                    color: var(--accent-500) !important;
+                    font-size: 40px !important;
+                    line-height: 1.1 !important;
+                    font-weight: 500 !important;
+                    letter-spacing: -0.02em !important;
+                    margin: 0 0 var(--s5) 0 !important;
+                ">
+                    File review
+                </h1>
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
@@ -1667,6 +1864,7 @@ def render_processing_screen():
 
 def open_object_detail_from_objects_screen(object_key: str):
     ensure_objects_state()
+    request_scroll_to_top()
 
     st.session_state.current_object = object_key
 
@@ -1808,15 +2006,17 @@ def render_objects_screen():
 
     apply_screen_bottom_compact_class("objects-screen-compact")
 
-    demo_costs = object_demo_costs()
+    locked_values = locked_demo_values()
+    locked_object_values = locked_values["objects"]
+    locked_project_level_prices = locked_values["project_level_prices"]
 
     st.markdown(
         """
-        <div class="screen-block objects-title-block">
-            <div class="orange-title">
-                <div>Review each object →</div>
-                <div>Set sale price per unit →</div>
-                <div>Generate proposal</div>
+        <div class="screen-wrap">
+            <div class="screen-block objects-title-block">
+                <div class="orange-title">
+                    <Set>Review objects → Set sale price → Generate proposal</div>
+                </div>
             </div>
         </div>
         """,
@@ -1830,7 +2030,7 @@ def render_objects_screen():
     with h0:
         st.markdown("<div class='table-head left-head'>project objects</div>", unsafe_allow_html=True)
     with h1:
-        st.markdown("<div class='table-head center'>quantity</div>", unsafe_allow_html=True)
+        st.markdown("<div class='table-head center'>qty</div>", unsafe_allow_html=True)
     with h2:
         st.markdown("<div class='table-head center'>self cost<br>per unit</div>", unsafe_allow_html=True)
     with h3:
@@ -1847,14 +2047,10 @@ def render_objects_screen():
     objects_subtotal = 0
 
     for object_key, obj in st.session_state.objects.items():
-        cost = demo_costs.get(object_key, {})
+        locked_object = locked_object_values.get(object_key, {})
 
-        if obj.get("approved") and obj.get("unit_cost"):
-            unit_cost = obj["unit_cost"]
-            suggested_price = obj.get("suggested_price") or round(unit_cost * 1.30)
-        else:
-            unit_cost = cost.get("unit_cost", obj.get("unit_cost") or 0)
-            suggested_price = cost.get("suggested_price", obj.get("suggested_price") or 0)
+        unit_cost = locked_object.get("unit_cost", 0)
+        suggested_price = locked_object.get("suggested_price", 0)
 
         obj["unit_cost"] = unit_cost
         obj["suggested_price"] = suggested_price
@@ -1862,14 +2058,8 @@ def render_objects_screen():
         input_key = f"sale_price_input_{object_key}"
         input_source_key = f"{input_key}_unit_cost_source"
 
-        if input_key not in st.session_state:
-            current_sale_price = obj.get("sale_price") or suggested_price
-            st.session_state[input_key] = format_money(current_sale_price)
-            st.session_state[input_source_key] = unit_cost
-
-        if obj.get("approved") and st.session_state.get(input_source_key) != unit_cost:
-            current_sale_price = obj.get("sale_price") or suggested_price
-            st.session_state[input_key] = format_money(current_sale_price)
+        if input_key not in st.session_state or st.session_state.get(input_source_key) != unit_cost:
+            st.session_state[input_key] = format_money(suggested_price)
             st.session_state[input_source_key] = unit_cost
 
         c0, c1, c2, c3, c4, c_spacer, c5 = st.columns(object_col_weights)
@@ -1929,7 +2119,7 @@ def render_objects_screen():
         with c5:
             st.markdown("<div class='review-button-offset'></div>", unsafe_allow_html=True)
 
-            review_label = "Done" if obj.get("approved") else "Review"
+            review_label = "DONE" if obj.get("approved") else "REVIEW"
             review_type = "primary" if obj.get("approved") else "secondary"
 
             st.button(
@@ -1948,14 +2138,22 @@ def render_objects_screen():
     delivery_self_cost = project_level_costs["delivery"]
     installation_self_cost = project_level_costs["installation"]
 
-    delivery_suggested = round(objects_subtotal * DELIVERY_RATE)
-    installation_suggested = round(objects_subtotal * INSTALLATION_RATE)
+    delivery_suggested = locked_project_level_prices["delivery"]
+    installation_suggested = locked_project_level_prices["installation"]
 
-    if "delivery_price_input" not in st.session_state:
+    if (
+        "delivery_price_input" not in st.session_state
+        or st.session_state.get("delivery_price_input_locked_default") != delivery_suggested
+    ):
         st.session_state.delivery_price_input = format_money(delivery_suggested)
+        st.session_state.delivery_price_input_locked_default = delivery_suggested
 
-    if "installation_price_input" not in st.session_state:
+    if (
+        "installation_price_input" not in st.session_state
+        or st.session_state.get("installation_price_input_locked_default") != installation_suggested
+    ):
         st.session_state.installation_price_input = format_money(installation_suggested)
+        st.session_state.installation_price_input_locked_default = installation_suggested
 
     d0, d1, d2, d3, d4, d_spacer, d5 = st.columns(object_col_weights)
 
@@ -2233,8 +2431,8 @@ def render_object_processing_screen():
     st.markdown(
         """
         <style>
-        .stApp:has(.object-processing-active) div[data-testid="stButton"] {
-            display: none !important;
+        .stApp:has(.object-processing-active) .block-container {
+        padding-bottom: 48px !important;
         }
 
         .stApp:has(.object-processing-active) .block-container {
@@ -2246,7 +2444,7 @@ def render_object_processing_screen():
         unsafe_allow_html=True,
     )
 
-    render_screen_header(f"Reviewing {object_name}")
+    render_screen_header(f"Estimating {object_name}")
 
     progress = st.progress(0)
     status_placeholder = st.empty()
@@ -2552,7 +2750,11 @@ def render_object_detail_screen():
 
     # Overhead section
 
-    overhead_source = normalize_overhead_df(st.session_state[overhead_state_key])
+    overhead_percentage_base_cost = materials_cost + labor_total
+    overhead_source = normalize_overhead_df(
+        st.session_state[overhead_state_key],
+        percentage_base_cost=overhead_percentage_base_cost,
+    )
     overhead_cost = round(overhead_source["Cost"].sum())
     overhead_vat = vat_from_taxable_rows(overhead_source)
     overhead_total = overhead_cost + overhead_vat
@@ -2585,6 +2787,7 @@ def render_object_detail_screen():
         hidden_columns=["VAT", "Overhead Group"],
         visible_group_count=len(OVERHEAD_GROUP_ORDER),
         cost_formula="overhead",
+        percentage_base_cost=overhead_percentage_base_cost,
     )
 
     update_aggrid_state_and_rerun(
@@ -2789,18 +2992,20 @@ apply_css()
 if "screen" not in st.session_state:
     st.session_state.screen = "upload"
 
-if st.session_state.pop("scroll_to_top", False):
-    st.markdown(
-        """
-        <script>
-        window.scrollTo(0, 0);
-        window.parent.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-        </script>
-        """,
-        unsafe_allow_html=True,
-    )
+current_route_signature = (
+    st.session_state.get("screen"),
+    st.session_state.get("current_object"),
+)
+
+previous_route_signature = st.session_state.get("_last_route_signature")
+
+if (
+    previous_route_signature is not None
+    and previous_route_signature != current_route_signature
+):
+    request_scroll_to_top()
+
+st.session_state._last_route_signature = current_route_signature
 
 if st.session_state.screen == "upload":
     render_upload_screen()
@@ -2819,3 +3024,5 @@ elif st.session_state.screen == "proposal":
 else:
     st.session_state.screen = "upload"
     st.rerun()
+
+run_scroll_to_top_if_requested()

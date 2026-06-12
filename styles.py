@@ -396,7 +396,7 @@ def apply_css():
             width: 600px;
             height: 200px;
             min-height: 200px;
-            border: 1px solid var(--line-200) !important;
+            border: 1px solid rgba(23, 25, 28, 0.55) !important;
             border-radius: var(--r-lg) !important;
             background: var(--surface) !important;
             padding: 0 !important;
@@ -415,7 +415,7 @@ def apply_css():
         }
 
         div[data-testid="stFileUploader"] section::before {
-            content: "Drop or upload";
+            content: "📎 DROP OR UPLOAD YOUR FILES";
             position: absolute;
             inset: 0;
             display: flex;
@@ -902,6 +902,56 @@ def apply_css():
         .project-info-small-value { color: var(--ink-900) !important; font-weight: 400 !important; }
         .project-info-small-divider { max-width: none; opacity: 1; }
         .review-buttons-spacer { height: var(--s5); }
+
+
+        /* File review scale tuning */
+        .processing-section-title,
+        .project-info-small-title {
+            font-size: 16px !important;
+            line-height: 1.3 !important;
+            letter-spacing: 0.06em !important;
+            margin-bottom: var(--s4) !important;
+        }
+
+        .detected-object-row {
+            min-height: 50px !important;
+            grid-template-columns: 1fr 48px 126px !important;
+            column-gap: var(--s4) !important;
+        }
+
+        .detected-object-name {
+            font-size: 17px !important;
+            line-height: 1.3 !important;
+            font-weight: 500 !important;
+        }
+
+        .detected-qty {
+            font-size: 16px !important;
+            line-height: 1.3 !important;
+        }
+
+        .detected-actions {
+            font-size: 10px !important;
+            letter-spacing: 0.07em !important;
+        }
+
+        .add-missing-row .detected-object-name {
+            font-size: 15px !important;
+        }
+
+        .project-info-small-row {
+            min-height: 24px !important;
+        }
+
+        .project-info-small-key,
+        .project-info-small-value {
+            font-size: 15px !important;
+            line-height: 1.5 !important;
+        }
+
+        .compact-meta-divider {
+            margin: 4px 0 6px 0 !important;
+        }
 
         /* ------------------------------------------------------------------
            Objects summary
@@ -1412,68 +1462,76 @@ def apply_css():
         /* ------------------------------------------------------------------
            AG Grid override. Kept here so the editor follows the same system.
            ------------------------------------------------------------------ */
-        .ag-theme-balham,
-        .ag-theme-balham .ag-root-wrapper,
-        .ag-theme-balham .ag-root-wrapper-body,
-        .ag-theme-balham .ag-center-cols-viewport,
-        .ag-theme-balham .ag-center-cols-container {
-            background: var(--surface) !important;
-            color: var(--ink-900) !important;
-            font-family: var(--sans) !important;
-        }
+            .ag-theme-balham,
+            .ag-theme-balham .ag-root-wrapper,
+            .ag-theme-balham .ag-root-wrapper-body,
+            .ag-theme-balham .ag-center-cols-viewport,
+            .ag-theme-balham .ag-center-cols-container {
+                background: var(--surface) !important;
+                color: var(--ink-900) !important;
+                font-family: var(--sans) !important;
+            }
 
-        .ag-theme-balham .ag-root-wrapper {
-            border: 1px solid var(--line-200) !important;
-            border-radius: var(--r-md) !important;
-            box-shadow: none !important;
-        }
+            .ag-theme-balham .ag-root-wrapper {
+                border: 1px solid color-mix(in srgb, var(--line-200) 65%, transparent) !important;
+                border-radius: var(--r-md) !important;
+                box-shadow: none !important;
+            }
 
-        .ag-theme-balham .ag-header,
-        .ag-theme-balham .ag-header-row,
-        .ag-theme-balham .ag-header-cell {
-            background: var(--bg) !important;
-            border-color: var(--line-200) !important;
-        }
+            .ag-theme-balham .ag-header,
+            .ag-theme-balham .ag-header-row,
+            .ag-theme-balham .ag-header-cell {
+                background: var(--bg) !important;
+                border-color: color-mix(in srgb, var(--line-200) 60%, transparent) !important;
+            }
 
-        .ag-theme-balham .ag-header-cell-text,
-        .ag-theme-balham .ag-header-group-text {
-            font-family: var(--mono) !important;
-            font-size: 11px !important;
-            font-weight: 500 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.06em !important;
-            color: var(--ink-500) !important;
-        }
+            .ag-theme-balham .ag-header-cell-text,
+            .ag-theme-balham .ag-header-group-text {
+                font-family: var(--mono) !important;
+                font-size: 11px !important;
+                font-weight: 500 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.06em !important;
+                color: var(--ink-500) !important;
+            }
 
-        .ag-theme-balham .ag-row,
-        .ag-theme-balham .ag-cell {
-            background: var(--surface) !important;
-            border-color: var(--line-200) !important;
-            color: var(--ink-900) !important;
-            font-size: 13px !important;
-        }
+            .ag-theme-balham .ag-row,
+            .ag-theme-balham .ag-cell {
+                background: var(--surface) !important;
+                border-color: color-mix(in srgb, var(--line-200) 55%, transparent) !important;
+                color: var(--ink-900) !important;
+                font-size: 13px !important;
+            }
 
-        .ag-theme-balham .ag-row-group,
-        .ag-theme-balham .ag-row-level-0 {
-            background: var(--accent-100) !important;
-        }
+            .ag-theme-balham .ag-cell {
+                border-right-width: 0.5px !important;
+            }
 
-        .ag-theme-balham .ag-row:hover .ag-cell {
-            background: var(--bg) !important;
-        }
+            .ag-theme-balham .ag-row {
+                border-bottom-width: 0.5px !important;
+            }
 
-        .ag-theme-balham .ag-number-cell,
-        .ag-theme-balham .ag-right-aligned-cell {
-            font-family: var(--mono) !important;
-        }
+            .ag-theme-balham .ag-row-group,
+            .ag-theme-balham .ag-row-level-0 {
+                background: var(--accent-100) !important;
+            }
 
-        .ag-theme-balham input,
-        .ag-theme-balham textarea {
-            background: var(--surface) !important;
-            color: var(--ink-900) !important;
-            border: 1px solid var(--accent-500) !important;
-            border-radius: var(--r-sm) !important;
-        }
+            .ag-theme-balham .ag-row:hover .ag-cell {
+                background: var(--bg) !important;
+            }
+
+            .ag-theme-balham .ag-number-cell,
+            .ag-theme-balham .ag-right-aligned-cell {
+                font-family: var(--mono) !important;
+            }
+
+            .ag-theme-balham input,
+            .ag-theme-balham textarea {
+                background: var(--surface) !important;
+                color: var(--ink-900) !important;
+                border: 1px solid var(--accent-500) !important;
+                border-radius: var(--r-sm) !important;
+            }
 
         /* ------------------------------------------------------------------
            Responsive
@@ -1578,6 +1636,33 @@ def apply_css():
                 transition: none !important;
             }
         }
+
+        .stApp:has(.objects-price-input-scope) div[data-testid="stButton"] button[kind="primary"] {
+            background: var(--success-100) !important;
+            border-color: var(--success-500) !important;
+            color: var(--success-500) !important;
+        }
+
+        .stApp:has(.objects-price-input-scope) div[data-testid="stButton"] button[kind="primary"] p {
+            color: var(--success-500) !important;
+        }
+
+        .stApp:has(.objects-price-input-scope) div[data-testid="stDownloadButton"] button[kind="primary"] {
+            background: var(--success-500) !important;
+            border-color: var(--success-500) !important;
+            color: #ffffff !important;
+        }
+
+        .stApp:has(.objects-price-input-scope) div[data-testid="stDownloadButton"] button[kind="primary"] p {
+            color: #ffffff !important;
+        }
+
+        .stApp:has(.objects-price-input-scope) div[data-testid="stDownloadButton"] button[kind="primary"]:hover {
+            background: var(--success-500) !important;
+            border-color: var(--success-500) !important;
+            color: #ffffff !important;
+        }
+
         </style>
         ''',
         unsafe_allow_html=True,
