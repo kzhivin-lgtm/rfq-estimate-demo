@@ -308,6 +308,69 @@ def nav_buttons(back_screen: str | None, next_screen: str | None, next_label: st
         col2.empty()
 
 
+
+
+def apply_bottom_action_button_css():
+    st.markdown(
+        """
+        <style>
+        /* Larger bottom action buttons only. Target Streamlit key classes so object REVIEW buttons stay unchanged. */
+        div[class*="st-key-nav_back_"] button,
+        div[class*="st-key-nav_next_"] button,
+        div[class*="st-key-processing_back"] button,
+        div[class*="st-key-confirm_objects_continue"] button,
+        div[class*="st-key-objects_back"] button,
+        div[class*="st-key-generate_proposal_download"] button,
+        div[class*="st-key-generate_proposal_download_done"] button,
+        div[class*="st-key-generate_proposal_missing"] button,
+        div[class*="st-key-generate_proposal_locked"] button,
+        div[class*="st-key-back_to_objects_"] button,
+        div[class*="st-key-approve_"] button,
+        div[class*="st-key-proposal_start_over"] button {
+            min-height: 52px !important;
+            height: 52px !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+
+        div[class*="st-key-nav_back_"] button div[data-testid="stMarkdownContainer"],
+        div[class*="st-key-nav_next_"] button div[data-testid="stMarkdownContainer"],
+        div[class*="st-key-processing_back"] button div[data-testid="stMarkdownContainer"],
+        div[class*="st-key-confirm_objects_continue"] button div[data-testid="stMarkdownContainer"],
+        div[class*="st-key-objects_back"] button div[data-testid="stMarkdownContainer"],
+        div[class*="st-key-generate_proposal_download"] button div[data-testid="stMarkdownContainer"],
+        div[class*="st-key-generate_proposal_download_done"] button div[data-testid="stMarkdownContainer"],
+        div[class*="st-key-generate_proposal_missing"] button div[data-testid="stMarkdownContainer"],
+        div[class*="st-key-generate_proposal_locked"] button div[data-testid="stMarkdownContainer"],
+        div[class*="st-key-back_to_objects_"] button div[data-testid="stMarkdownContainer"],
+        div[class*="st-key-approve_"] button div[data-testid="stMarkdownContainer"],
+        div[class*="st-key-proposal_start_over"] button div[data-testid="stMarkdownContainer"] {
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        div[class*="st-key-nav_back_"] button p,
+        div[class*="st-key-nav_next_"] button p,
+        div[class*="st-key-processing_back"] button p,
+        div[class*="st-key-confirm_objects_continue"] button p,
+        div[class*="st-key-objects_back"] button p,
+        div[class*="st-key-generate_proposal_download"] button p,
+        div[class*="st-key-generate_proposal_download_done"] button p,
+        div[class*="st-key-generate_proposal_missing"] button p,
+        div[class*="st-key-generate_proposal_locked"] button p,
+        div[class*="st-key-back_to_objects_"] button p,
+        div[class*="st-key-approve_"] button p,
+        div[class*="st-key-proposal_start_over"] button p {
+            line-height: 1.2 !important;
+            margin: 0 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 def render_screen_header(title: str, subtitle: str | None = None):
     st.markdown('<div class="screen-wrap">', unsafe_allow_html=True)
 
@@ -1131,13 +1194,13 @@ def render_aggrid_editor(
 
                     const parseNumber = (value) => {{
                         if (value === null || value === undefined || value === '') return 0;
-                        return Number(String(value).replace(/[₪,\u00A0\u202F\s]/g, '').trim()) || 0;
+                        return Number(String(value).replace(/[₪,\u00A0\u202F\\s]/g, '').trim()) || 0;
                     }};
 
                     const rowCost = (data) => {{
                         const monthlyCost = parseNumber(data["Monthly Cost"]);
                         const allocation = String(data["Allocation"] || "");
-                        const hoursMatch = allocation.match(/([0-9.]+)h\s*\/\s*([0-9.]+)h/);
+                        const hoursMatch = allocation.match(/([0-9.]+)h\\s*\\/\\s*([0-9.]+)h/);
 
                         if (monthlyCost && hoursMatch) {{
                             const objectHours = Number(hoursMatch[1]) || 0;
@@ -1239,7 +1302,7 @@ def render_aggrid_editor(
                 return "";
             }
 
-            const value = Number(String(raw).replace(/[₪,\u00A0\u202F\s]/g, "").trim());
+            const value = Number(String(raw).replace(/[₪,\u00A0\u202F\\s]/g, "").trim());
 
             if (!isFinite(value)) {
                 return raw;
@@ -1249,14 +1312,14 @@ def render_aggrid_editor(
             const isInteger = Math.abs(rounded % 1) < 0.0001;
             const text = isInteger
                 ? String(Math.round(rounded))
-                : rounded.toFixed(1).replace(/\.0$/, "");
+                : rounded.toFixed(1).replace(/\\.0$/, "");
 
             if (field === "Monthly Cost" && allocation.includes("%")) {
                 return text;
             }
 
             const parts = text.split(".");
-            const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, "\u202F");
+            const intPart = parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, "\u202F");
 
             return "₪" + intPart + (parts.length > 1 ? "." + parts[1] : "");
         }
@@ -2988,6 +3051,7 @@ def render_proposal_screen():
 # -----------------------------------------------------------------------------
 
 apply_css()
+apply_bottom_action_button_css()
 
 if "screen" not in st.session_state:
     st.session_state.screen = "upload"
