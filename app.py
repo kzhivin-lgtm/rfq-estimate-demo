@@ -1444,7 +1444,7 @@ def render_upload_screen():
     )
 
     uploaded_file = st.file_uploader(
-        "Drop or upload",
+        "📎 DROP OR UPLOAD",
         type=["pdf", "xlsx", "xls", "csv", "png", "jpg", "jpeg", "dwg", "dxf"],
         label_visibility="collapsed",
     )
@@ -2256,7 +2256,7 @@ def render_object_processing_screen():
         unsafe_allow_html=True,
     )
 
-    render_screen_header(f"Reviewing {object_name}")
+    render_screen_header(f"Estimating {object_name}")
 
     progress = st.progress(0)
     status_placeholder = st.empty()

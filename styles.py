@@ -360,14 +360,13 @@ def apply_css():
            Upload / landing
            ------------------------------------------------------------------ */
         .hero-wrap {
-            height: 100vh;
-            max-height: 100vh;
+            min-height: calc(100vh - 24px);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             padding-top: 0;
-            transform: translateY(-24px);
+            transform: none;
         }
 
         html body .stApp .landing-title,
