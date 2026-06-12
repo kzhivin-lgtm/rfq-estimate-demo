@@ -444,21 +444,24 @@ def apply_css():
 
         /* ------------------------------------------------------------------
            Progress
-           ------------------------------------------------------------------ */
-        div[data-testid="stProgress"] > div,
-        div[data-testid="stProgress"] div[role="progressbar"] {
-            background-color: var(--line-200) !important;
-            border-radius: 999px !important;
-            box-shadow: none !important;
-        }
+            ------------------------------------------------------------ */
+           
+            div[data-testid="stProgress"] > div {
+                background-color: var(--line-200) !important;
+                border-radius: 999px !important;
+                box-shadow: none !important;
+            }
 
-        div[data-testid="stProgress"] div[role="progressbar"] > div,
-        .stProgress > div > div > div,
-        .stProgress > div > div > div > div,
-        div[data-testid="stProgress"] div[style*="background-color"] {
-            background-color: var(--accent-500) !important;
-            border-color: var(--accent-500) !important;
-        }
+            div[data-testid="stProgress"] div[role="progressbar"] {
+                background-color: transparent !important;
+                border-radius: 999px !important;
+            }
+
+            div[data-testid="stProgress"] div[role="progressbar"] > div {
+                background-color: #2F80ED !important;
+                border-color: #2F80ED !important;
+                border-radius: 999px !important;
+            }
 
         /* ------------------------------------------------------------------
            Buttons
