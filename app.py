@@ -2632,7 +2632,7 @@ def render_object_detail_screen():
             column-gap: 52px !important;
             align-items: start !important;
             padding-top: 28px !important;
-            margin-bottom: -22px !important;
+            margin-bottom: -56px !important;
         }
 
         .object-detail-title-block {
