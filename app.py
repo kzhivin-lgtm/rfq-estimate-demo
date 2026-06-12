@@ -12,6 +12,7 @@ from textwrap import dedent
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 try:
     from st_aggrid import (
@@ -411,7 +412,7 @@ def run_scroll_to_top_if_requested():
 
     st.session_state.scroll_to_top = False
 
-    st.html(
+    components.html(
         """
         <script>
         function scrollToTopNow() {
@@ -446,7 +447,8 @@ def run_scroll_to_top_if_requested():
             window.setTimeout(scrollToTopNow, delay);
         });
         </script>
-        """
+        """,
+        height=0,
     )
 
 def safe_float(value, fallback=0):
@@ -2627,10 +2629,10 @@ def render_object_detail_screen():
         .object-detail-hero {
             display: grid !important;
             grid-template-columns: max-content max-content !important;
-            column-gap: 38px !important;
+            column-gap: 52px !important;
             align-items: start !important;
             padding-top: 28px !important;
-            margin-bottom: -4px !important;
+            margin-bottom: -10px !important;
         }
 
         .object-detail-title-block {
@@ -2638,33 +2640,69 @@ def render_object_detail_screen():
             padding: 0 !important;
         }
 
+        .object-detail-main-line {
+            display: flex !important;
+            align-items: baseline !important;
+            gap: 10px !important;
+            margin: 0 0 9px 0 !important;
+            font-family: var(--mono) !important;
+            font-size: 40px !important;
+            line-height: 1.05 !important;
+            letter-spacing: -0.04em !important;
+            white-space: nowrap !important;
+            color: var(--ink-900) !important;
+            font-weight: 700 !important;
+        }
+
+        .object-detail-main-value {
+            color: var(--orange) !important;
+            font-weight: 700 !important;
+        }
+
+        .object-detail-sub-line {
+            display: flex !important;
+            align-items: baseline !important;
+            gap: 8px !important;
+            margin: 0 !important;
+            font-family: var(--mono) !important;
+            font-size: 24px !important;
+            line-height: 1.15 !important;
+            letter-spacing: -0.025em !important;
+            white-space: nowrap !important;
+            color: var(--ink-700) !important;
+            font-weight: 600 !important;
+        }
+
+        .object-detail-sub-value {
+            color: var(--orange) !important;
+            font-weight: 700 !important;
+        }
+
+        .object-detail-dot {
+            color: var(--ink-400) !important;
+            margin: 0 8px !important;
+            font-weight: 500 !important;
+        }
+
         .object-detail-info-row {
             display: flex !important;
             align-items: baseline !important;
             gap: 10px !important;
-            margin: 0 0 10px 0 !important;
-            font-size: 38px !important;
-            line-height: 1.08 !important;
-            letter-spacing: -1.1px !important;
+            margin: 0 0 8px 0 !important;
+            font-size: 34px !important;
+            line-height: 1.02 !important;
+            letter-spacing: -0.8px !important;
             white-space: nowrap !important;
         }
 
         .object-detail-info-label {
             color: var(--ink-900) !important;
-            font-weight: 600 !important;
+            font-weight: 500 !important;
         }
 
         .object-detail-info-value {
             color: var(--orange) !important;
             font-weight: 800 !important;
-        }
-
-        .object-detail-inline-muted {
-            color: var(--ink-500) !important;
-            font-size: 26px !important;
-            font-weight: 500 !important;
-            letter-spacing: -0.4px !important;
-            margin-left: 10px !important;
         }
 
         .object-detail-preview-img {
@@ -2762,14 +2800,16 @@ def render_object_detail_screen():
     hero_html = (
         '<div class="object-detail-hero">'
         '<div class="object-detail-title-block">'
-        '<div class="object-detail-info-row">'
-        '<span class="object-detail-info-label">OBJECT:</span>'
-        f'<span class="object-detail-info-value">{obj["name"]}</span>'
-        f'<span class="object-detail-inline-muted">(QTY: {obj.get("qty", 1)})</span>'
+        '<div class="object-detail-main-line">'
+        '<span>OBJECT:</span>'
+        f'<span class="object-detail-main-value">{obj["name"]}</span>'
         '</div>'
-        '<div class="object-detail-info-row">'
-        '<span class="object-detail-info-label">AI CONFIDENCE:</span>'
-        f'<span class="object-detail-info-value">{kitchen_confidence}%</span>'
+        '<div class="object-detail-sub-line">'
+        '<span>QTY:</span>'
+        f'<span class="object-detail-sub-value">{obj.get("qty", 1)}</span>'
+        '<span class="object-detail-dot">·</span>'
+        '<span>AI CONFIDENCE:</span>'
+        f'<span class="object-detail-sub-value">{kitchen_confidence}%</span>'
         '</div>'
         '</div>'
         '<div>'

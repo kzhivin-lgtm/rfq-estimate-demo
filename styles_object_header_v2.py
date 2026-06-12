@@ -254,6 +254,8 @@ def apply_css():
         .orange-title,
         .screen-title,
         .object-detail-info-row,
+        .object-detail-main-line,
+        .object-detail-sub-line,
         .object-section-title,
         .object-final-title,
         .section-title,
@@ -1159,7 +1161,7 @@ def apply_css():
         html body .stApp .object-detail-hero {
             display: grid !important;
             grid-template-columns: max-content max-content !important;
-            column-gap: var(--s6) !important;
+            column-gap: 52px !important;
             align-items: start !important;
             padding-top: var(--s5) !important;
             margin-bottom: var(--s3) !important;
@@ -1170,34 +1172,68 @@ def apply_css():
             padding: 0 !important;
         }
 
+        html body .stApp .object-detail-main-line {
+            display: flex !important;
+            align-items: baseline !important;
+            gap: 10px !important;
+            margin: 0 0 9px 0 !important;
+            font-size: 40px !important;
+            line-height: 1.05 !important;
+            letter-spacing: -0.04em !important;
+            white-space: nowrap !important;
+            color: var(--ink-900) !important;
+            font-weight: 700 !important;
+        }
+
+        html body .stApp .object-detail-main-value {
+            color: var(--accent-500) !important;
+            font-weight: 700 !important;
+        }
+
+        html body .stApp .object-detail-sub-line {
+            display: flex !important;
+            align-items: baseline !important;
+            gap: 8px !important;
+            margin: 0 !important;
+            font-size: 24px !important;
+            line-height: 1.15 !important;
+            letter-spacing: -0.025em !important;
+            white-space: nowrap !important;
+            color: var(--ink-700) !important;
+            font-weight: 600 !important;
+        }
+
+        html body .stApp .object-detail-sub-value {
+            color: var(--accent-500) !important;
+            font-weight: 700 !important;
+        }
+
+        html body .stApp .object-detail-dot {
+            color: var(--ink-400) !important;
+            margin: 0 8px !important;
+            font-weight: 500 !important;
+        }
+
         html body .stApp .object-detail-info-row {
             display: flex !important;
             align-items: baseline !important;
             gap: 10px !important;
-            margin: 0 0 10px 0 !important;
-            font-size: 38px !important;
-            line-height: 1.08 !important;
-            letter-spacing: -0.03em !important;
+            margin: 0 0 var(--s2) 0 !important;
+            font-size: 28px !important;
+            line-height: 1.15 !important;
+            letter-spacing: -0.01em !important;
             white-space: nowrap !important;
-            font-weight: 600 !important;
+            font-weight: 500 !important;
         }
 
         html body .stApp .object-detail-info-label {
             color: var(--ink-900) !important;
-            font-weight: 600 !important;
+            font-weight: 500 !important;
         }
 
         html body .stApp .object-detail-info-value {
             color: var(--accent-500) !important;
-            font-weight: 800 !important;
-        }
-
-        html body .stApp .object-detail-inline-muted {
-            color: var(--ink-500) !important;
-            font-size: 26px !important;
             font-weight: 500 !important;
-            letter-spacing: -0.02em !important;
-            margin-left: 10px !important;
         }
 
         html body .stApp .object-detail-preview-img {
@@ -1593,14 +1629,8 @@ def apply_css():
             }
 
             html body .stApp .object-detail-info-row {
-                font-size: 24px !important;
+                font-size: 22px !important;
                 white-space: normal !important;
-                flex-wrap: wrap !important;
-            }
-
-            html body .stApp .object-detail-inline-muted {
-                font-size: 18px !important;
-                margin-left: 0 !important;
             }
 
             html body .stApp .object-detail-preview-img,
