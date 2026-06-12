@@ -296,10 +296,11 @@ def apply_css():
             margin: 0 0 var(--s5) 0 !important;
         }
 
-        .file-review-title {
+       .file-review-title {
             color: var(--accent-500) !important;
             font-size: 40px !important;
             line-height: 1.1 !important;
+            font-weight: 500 !important;
             letter-spacing: -0.02em !important;
         }
 
