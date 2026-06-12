@@ -1,0 +1,51 @@
+RA-N01 LOCKED DEMO VALUES
+=========================
+
+Purpose:
+These values are the fixed demo snapshot for the RA-N01 objects screen and the downloadable commercial proposal.
+Use these numbers as the reset/restore target whenever editable cells drift during the demo.
+Do not recompute the proposal total from stale PDF values.
+
+VAT_RATE = 18%
+
+OBJECTS
+Kitchen:
+  qty = 1
+  self_cost = 29925
+  unit_price = 38902
+  total = 38902
+
+Kitchen island:
+  qty = 1
+  self_cost = 33363
+  unit_price = 43372
+  total = 43372
+
+Wall shelf:
+  qty = 1
+  self_cost = 19904
+  unit_price = 25875
+  total = 25875
+
+Delivery:
+  qty = 1
+  self_cost = 1400
+  unit_price = 3244
+  total = 3244
+  suggestion_label = suggested: 3% of objects subtotal
+
+Installation:
+  qty = 1
+  self_cost = 5800
+  unit_price = 10815
+  total = 10815
+  suggestion_label = suggested: 10% of objects subtotal
+
+PROJECT SUMMARY
+project_price = 122208
+vat_18_percent = 21997
+project_total = 144205
+
+CHECKSUM
+38902 + 43372 + 25875 + 3244 + 10815 = 122208
+122208 + 21997 = 144205
