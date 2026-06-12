@@ -1842,10 +1842,63 @@ def render_processing_screen():
                 unsafe_allow_html=True,
             )
 
+        rfq_source_path = Path("assets/RA-N01_20260216.pdf")
+
         st.markdown(
-            "<div class='preview-filename'>RA-N01_20260216.pdf</div>",
+            """
+            <style>
+            div[class*="st-key-rfq_source_file_download"] button {
+                display: block !important;
+                width: auto !important;
+                min-height: 0 !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                color: inherit !important;
+                text-align: left !important;
+                justify-content: flex-start !important;
+            }
+
+            div[class*="st-key-rfq_source_file_download"] button:hover,
+            div[class*="st-key-rfq_source_file_download"] button:active,
+            div[class*="st-key-rfq_source_file_download"] button:focus {
+                border: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                color: inherit !important;
+            }
+
+            div[class*="st-key-rfq_source_file_download"] button div[data-testid="stMarkdownContainer"],
+            div[class*="st-key-rfq_source_file_download"] button p {
+                margin: 0 !important;
+                padding: 0 !important;
+                font: inherit !important;
+                color: inherit !important;
+                text-align: left !important;
+            }
+            </style>
+            """,
             unsafe_allow_html=True,
         )
+
+        if rfq_source_path.exists():
+            st.download_button(
+                "RA-N01_20260216.pdf",
+                data=rfq_source_path.read_bytes(),
+                file_name="RA-N01_20260216.pdf",
+                mime="application/pdf",
+                key="rfq_source_file_download",
+                width="content",
+            )
+        else:
+            st.markdown(
+                "<div class='preview-filename'>RA-N01_20260216.pdf</div>",
+                unsafe_allow_html=True,
+            )
 
     with right:
         st.markdown(
@@ -2507,7 +2560,7 @@ def render_object_processing_screen():
         unsafe_allow_html=True,
     )
 
-    render_screen_header(f"Estimating {object_name}")
+    render_screen_header(f"Estimating: {object_name}")
 
     progress = st.progress(0)
     status_placeholder = st.empty()
