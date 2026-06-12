@@ -287,6 +287,16 @@ def apply_css():
             width: 100%;
         }
 
+        .app-h1 {
+            font-family: var(--mono) !important;
+            color: var(--accent-500) !important;
+            font-size: 40px !important;
+            line-height: 1.1 !important;
+            font-weight: 500 !important;
+            letter-spacing: -0.02em !important;
+            margin: 0 0 var(--s5) 0 !important;
+        }
+
         .screen-title {
             color: var(--ink-900) !important;
             font-size: 28px !important;
@@ -294,14 +304,6 @@ def apply_css():
             font-weight: 500 !important;
             letter-spacing: -0.01em !important;
             margin: 0 0 var(--s5) 0 !important;
-        }
-
-       .file-review-title {
-            color: var(--accent-500) !important;
-            font-size: 40px !important;
-            line-height: 1.1 !important;
-            font-weight: 500 !important;
-            letter-spacing: -0.02em !important;
         }
 
         .screen-subtitle {

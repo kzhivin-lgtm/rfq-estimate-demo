@@ -288,9 +288,9 @@ def render_screen_header(title: str, subtitle: str | None = None):
 
     st.markdown(
         f"""
-        <div class="screen-title">
+        <h1 class="app-h1">
             {title}
-        </div>
+        </h1>
         """,
         unsafe_allow_html=True,
     )
@@ -1436,9 +1436,9 @@ def render_upload_screen():
 
     st.markdown(
         """
-        <div class="landing-title">
-            RFQ to Estimate to Proposal
-        </div>
+        <h1 class="app-h1">
+        RFQ to Estimate to Proposal
+        </h1>
         """,
         unsafe_allow_html=True,
     )
@@ -1550,7 +1550,7 @@ def render_processing_screen():
 
     st.markdown(
         "<div class='screen-block processing-title-block'>"
-        "<h1 class='screen-title file-review-title'>File review</h1>"
+        "<h1 class='app-h1'>File review</h1>"
         "</div>",
         unsafe_allow_html=True,
     )
