@@ -1550,7 +1550,19 @@ def render_processing_screen():
 
     st.markdown(
         "<div class='screen-block processing-title-block'>"
-        "<h1 class='screen-title'>File review</h1>"
+        """
+        <h1 style="
+            font-family: var(--mono) !important;
+            color: var(--accent-500) !important;
+            font-size: 40px !important;
+            line-height: 1.1 !important;
+            font-weight: 500 !important;
+            letter-spacing: -0.02em !important;
+            margin: 0 0 var(--s5) 0 !important;
+        ">
+            File review
+        </h1>
+        """
         "</div>",
         unsafe_allow_html=True,
     )
